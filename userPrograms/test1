@@ -1,0 +1,2 @@
+const GameIO = require('../GameIO.js')
+GameIO.say('Hello Worlds!')
