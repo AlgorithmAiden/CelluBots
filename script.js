@@ -1,5 +1,5 @@
 //this is the seed controlling all world generation
-const firstSeed = Math.random() * 100
+const firstSeed = 0
 
 //gives a random number 0-1
 const random = (() => {
@@ -154,15 +154,13 @@ const grid = {
 const viewPort = {
     x: 0,
     y: 0,
-    scale: 10
+    scale: 3
 }
+let hauntedBot = 0
 
-const defaultBotColor = '#000'
 const backgroundColor = '#333'
 
-const menuHeight = .2
-
-import * as Menu from './Menu.js'
+import * as Menu from './utils/Menu.js'
 Menu.setCtx(ctx)
 Menu.setMenu('home', {
     items: [
@@ -171,9 +169,10 @@ Menu.setMenu('home', {
         { text: 'Set Program', func(self) { } },
         { text: 'Run Program', func(self) { } },
         { text: 'Transfer Self', func(self) { } },
-        { text: 'Start Auto Tick', func(self) { } },
-        { text: 'Stop Auto Tick', func(self) { } },
-        { text: 'TEST MENU', func(self) { Menu.open('test_menu') } },
+        { text: 'Toggle Auto Tick', func(self) { } },
+        { text: 'Settings', func(self) { Menu.open('settings') } },
+        { text: 'Save Game', func(self) { } },
+        { text: 'Load Game', func(self) { } },
     ]
 })
 Menu.setMenu('quick_actions', {
@@ -185,16 +184,91 @@ Menu.setMenu('quick_actions', {
         { text: 'Change Mode', func(self) { } },
     ]
 })
-Menu.setMenu('test_menu', {
-    onCreate(self) {
-        self.items = []
-        for (let i = 0; i < 25; i++)
-            self.items.push({ text: `Item ${i}`, func() { } })
-    }
+Menu.setMenu('settings', {
+    items: [
+        { text: 'Increase Test Size', func(self) { } },
+        { text: 'Decrease Text Size', func(self) { } },
+    ]
+})
+Menu.setBackgroundColor('#0006')
+Menu.setFont('Droid Sans Mono')
+
+import * as Colors from './utils/Colors.js'
+const botBackgroundColor = '#000'
+const botModeColors = { 'Blank': '#fff' }
+const botModes = [
+    'Harvester',
+    'Mobile',
+    'Crafter',
+    'Builder',
+    'Destroyer',
+]
+botModes.forEach((mode, index) => {
+    const color = Colors.createColor()
+    color.saturation = 100
+    color.lightness = 50
+    color.hue = Math.round(100 / botModes.length * index)
+    botModeColors[mode] = color.hex
 })
 
+let nextBotId = 0
+let bots = {}
+function createBot(x, y, mode = 'Blank') {
+    bots[nextBotId] = {
+        mem: {},
+        mode,
+        source: '',
+        inventory: new Array(9).fill(0).map(slot => ({ type: '', count: 0 })),
+        x,
+        y,
+        id: nextBotId
+    }
+    grid.set(x, y, { botId: nextBotId })
+    nextBotId++
+}
+createBot(0, 0)
+createBot(2, 1, 'Destroyer')
+createBot(-1, 2, 'Mobile')
+createBot(-2, 0, 'Crafter')
+createBot(1, -3, 'Builder')
+createBot(2, -1, 'Harvester')
 
-function render() {
+const runBots = (() => {
+    // function harvest(x,y,dir,slot,bot) {
+
+    // }
+    function moveBot(x, y, dir, bot) {
+        if (dir == 'up' && Object.keys(grid.get(x, y - 1)).length == 0) {
+            bot.y--
+            grid.set(x, y, {})
+            grid.set(x, y - 1, { botId: bot.id })
+        } else if (dir == 'right' && Object.keys(grid.get(x + 1, y)).length == 0) {
+            bot.x++
+            grid.set(x, y, {})
+            grid.set(x + 1, y, { botId: bot.id })
+        } else if (dir == 'down' && Object.keys(grid.get(x, y + 1)).length == 0) {
+            bot.y++
+            grid.set(x, y, {})
+            grid.set(x, y + 1, { botId: bot.id })
+        } else if (dir == 'left' && Object.keys(grid.get(x - 1, y)).length == 0) {
+            bot.x--
+            grid.set(x, y, {})
+            grid.set(x - 1, y, { botId: bot.id })
+        }
+    }
+    // function moveItem(fromSlot,toSlot,count,bot) {
+
+    // }
+    // function craft()
+    return () => {
+        Object.keys(bots).forEach(botId => {
+            const bot = bots[botId]
+            moveBot(bot.x, bot.y, ['up', 'right', 'down', 'left'][Math.floor(random() * 4)], bot, botId)
+        })
+    }
+})()
+
+function renderGrid() {
     //clear the screen with a bright flashy color
     ctx.fillStyle = `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -211,6 +285,18 @@ function render() {
     const maxX = Math.ceil(viewPort.x + canvas.width / cellSize / 2)
     const maxY = Math.ceil(viewPort.y + canvas.height / cellSize / 2)
 
+    //more calculations for the bot logos
+    ctx.lineWidth = cellSize * .1
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    const offset = halfCellSize * .7
+    const gapOffset = cellSize * .2
+    const radius = halfCellSize * .35
+    const twoPi = Math.PI * 2
+
+    //glowing layer gets drawn last
+    let glowSpots = []
+
     //render each cell in range
     for (let x = minX; x <= maxX; x++)
         for (let y = minY; y <= maxY; y++) {
@@ -219,7 +305,7 @@ function render() {
                 ctx.fillStyle = resources[cell.resource].color
             }
             else if (cell.botId)
-                ctx.fillStyle = defaultBotColor
+                ctx.fillStyle = botBackgroundColor
             else
                 ctx.fillStyle = backgroundColor
             ctx.fillRect(
@@ -228,32 +314,67 @@ function render() {
                 ceilCellSize,
                 ceilCellSize
             )
+            if (cell.botId != undefined) {
+                ctx.strokeStyle = botModeColors[bots[cell.botId].mode]
+                const centerX = middleX + (x - viewPort.x) * cellSize
+                const centerY = middleY + (y - viewPort.y) * cellSize
+                glowSpots.push({ x: centerX, y: centerY, color: ctx.strokeStyle })
+                ctx.beginPath()
+                ctx.moveTo(centerX - offset, centerY - offset)
+                ctx.lineTo(centerX - offset + gapOffset, centerY - offset)
+                ctx.moveTo(centerX + offset - gapOffset, centerY - offset)
+                ctx.lineTo(centerX + offset, centerY - offset)
+                ctx.lineTo(centerX + offset, centerY - offset + gapOffset)
+                ctx.moveTo(centerX + offset, centerY + offset - gapOffset)
+                ctx.lineTo(centerX + offset, centerY + offset)
+                ctx.lineTo(centerX + offset - gapOffset, centerY + offset)
+                ctx.moveTo(centerX - offset + gapOffset, centerY + offset)
+                ctx.lineTo(centerX - offset, centerY + offset)
+                ctx.lineTo(centerX - offset, centerY + offset - gapOffset)
+                ctx.moveTo(centerX - offset, centerY - offset + gapOffset)
+                ctx.lineTo(centerX - offset, centerY - offset)
+                ctx.moveTo(centerX + radius, centerY)
+                ctx.arc(centerX, centerY, radius, 0, twoPi)
+                ctx.stroke()
+            }
         }
 
-    //show where the viewpoint is
-    ctx.fillStyle = '#0f06'
-    ctx.fillRect(Math.floor(middleX - halfCellSize), Math.floor(middleY - halfCellSize), cellSize, cellSize)
-
+    //render all the glow spots
+    const glowSpotSize = cellSize * 5
+    const halfGlowSpotSize = glowSpotSize / 2
+    glowSpots.forEach(spot => {
+        const grad = ctx.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, halfGlowSpotSize)
+        grad.addColorStop(0, `${spot.color.slice(0, 7)}66`)
+        grad.addColorStop(1, `${spot.color.slice(0, 7)}00`)
+        ctx.fillStyle = grad
+        ctx.fillRect(spot.x - halfGlowSpotSize, spot.y - halfGlowSpotSize, glowSpotSize, glowSpotSize)
+    })
 }
 
 setInterval(() => {
-    if (currentKeys.includes('w'))
-        viewPort.y -= viewPort.scale / 100
-    if (currentKeys.includes('d'))
-        viewPort.x += viewPort.scale / 100
-    if (currentKeys.includes('s'))
-        viewPort.y += viewPort.scale / 100
-    if (currentKeys.includes('a'))
-        viewPort.x -= viewPort.scale / 100
-    if (currentKeys.includes('e'))
-        viewPort.scale = Math.max(viewPort.scale * .99, 1)
-    if (currentKeys.includes('q'))
-        viewPort.scale *= 1.01
+    if (Menu.getStack().length == 0) {
+        if (currentKeys.includes('w'))
+            viewPort.y -= viewPort.scale / 100
+        if (currentKeys.includes('d'))
+            viewPort.x += viewPort.scale / 100
+        if (currentKeys.includes('s'))
+            viewPort.y += viewPort.scale / 100
+        if (currentKeys.includes('a'))
+            viewPort.x -= viewPort.scale / 100
+        if (currentKeys.includes('e'))
+            viewPort.scale = Math.max(viewPort.scale * .99, 1)
+        if (currentKeys.includes('q'))
+            viewPort.scale *= 1.01
+    }
+
+    runBots()
+    viewPort.x = bots[hauntedBot].x
+    viewPort.y = bots[hauntedBot].y
 
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-    // render()
-    Menu.render(50, canvas.height * 1)
+    renderGrid()
+    Menu.render(30, canvas.height * .2)
 }, 0)
 
 let currentKeys = []
@@ -333,7 +454,6 @@ Misc:
 Bot File Structure:
 ~ {
     mem: {}, (can be seen by self + others)
-    hasAction: true, (used for things like moving harvesting etc)
     x: 0,
     y: 0,
     inventory: [
@@ -341,16 +461,14 @@ Bot File Structure:
         [0], (any slot with zero count is empty)
         [10, 'gear']
     ],
-    mode: 'Harvester'
+    mode: 'Harvester',
+    source: 'F217js=12sa=ca'
 }
 
 Bot Program Usage:
-~ each bot has its own program, whose name is the same as the bots id
-~ to set a bot program, a source program is input, and then copied for the bot (this is to prevent unwanted communications between bots)
-~ each bot program is a plain .js program (located in ), where it can get game element with 'const Game = require('../GameIO.js')
-~ the bots program will be run in its entirety each tick
-~ GameIO.js will just require the stuff from here (script.js) and re export them, this is to create a smoother user experience without having to rename my program
-~ the programs will be ran in './botPrograms/(botId)'
+~ each bot will have a program hash as a string to use to find said program
+~ when setting a program, the program will be copied and saved under its hash
+~ each tick if no bot ran a program, it will be removed
 
 Player Controls:
 ~ ideally the player should have no more info then any bot, but this idea taken to the extreme would simple be the player typing code and getting objects back, no visuals at all

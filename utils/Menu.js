@@ -9,6 +9,10 @@ let menus = {}
 let stack = []
 let input = ''
 let selected = ''
+let font = 'Times New Roman'
+/**
+ * Go back one menu
+ */
 export function back() {
     if (stack > 1) {
         const newMenu = menus[stack(stack.length - 1)]
@@ -19,6 +23,10 @@ export function back() {
     input = ''
     selected = ''
 }
+/**
+ * Open a menu
+ * @param {string} name 
+ */
 export function open(name) {
 
     //add the new menu to the stack
@@ -35,6 +43,12 @@ export function open(name) {
     input = ''
     selected = ''
 }
+/**
+ * For use with auto key inputs
+ * @param {string} key 
+ * @param {string} mode 
+ * @param {object} event 
+ */
 export function handleKey(key, mode, event) {
 
     //prevent tabbing
@@ -166,45 +180,51 @@ export function render(textSize, maxHeight) {
             //offset the lines if there is any chars typed
             regularGrad = ctx.createLinearGradient(0, textSize, 0, maxHeight)
             regularGrad.addColorStop(0, '#0000')
-            regularGrad.addColorStop(.01, normalColor)
-            regularGrad.addColorStop(.99, normalColor)
+            regularGrad.addColorStop(.001, normalColor)
+            regularGrad.addColorStop(.999, normalColor)
             regularGrad.addColorStop(1, '#0000')
             correctGrad = ctx.createLinearGradient(0, textSize, 0, maxHeight)
             correctGrad.addColorStop(0, '#0000')
-            correctGrad.addColorStop(.01, correctColor)
-            correctGrad.addColorStop(.99, correctColor)
+            correctGrad.addColorStop(.001, correctColor)
+            correctGrad.addColorStop(.999, correctColor)
             correctGrad.addColorStop(1, '#0000')
             invalidGrad = ctx.createLinearGradient(0, textSize, 0, maxHeight)
             invalidGrad.addColorStop(0, '#0000')
-            invalidGrad.addColorStop(.01, invalidColor)
-            invalidGrad.addColorStop(.99, invalidColor)
+            invalidGrad.addColorStop(.001, invalidColor)
+            invalidGrad.addColorStop(.999, invalidColor)
             invalidGrad.addColorStop(1, '#0000')
         } else {
 
             //otherwise only cut off the bottom
             regularGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            regularGrad.addColorStop(.99, '#fff')
+            regularGrad.addColorStop(.999, '#fff')
             regularGrad.addColorStop(1, '#0000')
             correctGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            correctGrad.addColorStop(.99, '#0f0')
+            correctGrad.addColorStop(.999, '#0f0')
             correctGrad.addColorStop(1, '#0000')
             invalidGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            invalidGrad.addColorStop(.99, '#f00')
+            invalidGrad.addColorStop(.999, '#f00')
             invalidGrad.addColorStop(1, '#0000')
         }
 
-        //draw the background
-        ctx.fillStyle = '#0006'
-        ctx.fillRect(0, 0, canvas.width, maxHeight)
-
         //hold the menu
         const currentMenu = menus[stack[stack.length - 1]]
+
+        //shrink the menu if it is larger than needed
+        maxHeight = Math.min(
+            maxHeight,
+            currentMenu.items.length * textSize
+        )
+
+        //draw the background
+        ctx.fillStyle = backgroundColor
+        ctx.fillRect(0, 0, canvas.width, maxHeight)
 
         //ensure the text baseline is correct
         ctx.textBaseline = 'top'
 
         //set the font
-        ctx.font = `${textSize}px Droid Sans Mono`
+        ctx.font = `${textSize}px ${font}`
 
         //sort the items
         let invalidItems = []
@@ -302,6 +322,13 @@ export function render(textSize, maxHeight) {
     }
 }
 /**
+ * The stack is used to determine menu hierarchy
+ * @returns The array containing all the menus open
+ */
+export function getStack() {
+    return stack
+}
+/**
  * Add a menu to the list for use
  * @param {string} name
  * @param {object} menu eg {onCreate(self){}, items:[{text:'item1',func(self){}}]}
@@ -342,6 +369,11 @@ export function setHighlightedColor(value) { highlightedColor = value }
  * @param {ctx} value 
  */
 export function setCtx(value) { ctx = value }
+/**
+ * The font to use for menu items
+ * @param {string} value 
+ */
+export function setFont(value) { font = value }
 
 document.addEventListener('keypress', event => handleKey(event.key, 'press', event))
 document.addEventListener('keyup', event => handleKey(event.key, 'up', event))
