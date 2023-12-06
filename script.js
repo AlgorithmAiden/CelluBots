@@ -1,5 +1,5 @@
 //this is the seed controlling all world generation
-const firstSeed = 0
+const firstSeed = Math.random() * 100
 
 //gives a random number 0-1
 const random = (() => {
@@ -14,6 +14,7 @@ const random = (() => {
     return lcgRandom
 })()
 
+//used for resource distribution
 const perlinNoise = (() => {
     function fade(t) {
         return t * t * t * (t * (t * 6 - 15) + 10)
@@ -85,25 +86,25 @@ const resources = {
         color: '#ef7646',
         richness: 100,
         frequency: .2,
-        scale: 25
+        scale: 20
     },
     iron: {
         color: '#ddddff',
         richness: 100,
         frequency: .2,
-        scale: 25
+        scale: 20
     },
     coal: {
         color: '#000000',
         richness: 100,
         frequency: .2,
-        scale: 25
+        scale: 20
     }
 }
 
 //give each resource a seed for generation
 Object.keys(resources).forEach(key => {
-    resources[key].seed = random()
+    resources[key].seed = random() * 1_000
 })
 
 //setup the canvas
@@ -127,21 +128,18 @@ const grid = {
         const cords = `${x}/${y}`
         if (!grid[cords]) {
             let cell = {}
+            const distance = Math.sqrt(-x * -x + -y * -y)
             Object.keys(resources).forEach(name => {
                 const resource = resources[name]
-                const noise = perlinNoise(x / resource.scale, y / resource.scale, resource.seed * 100)
+                const noise = perlinNoise(x / resource.scale, y / resource.scale, resource.seed)
                 const frequency = resource.frequency
-                if (noise < frequency) {
+                if (noise < frequency && distance > 10) {
                     const richness = Math.round((1 - noise / frequency) * resource.richness)
                     if ((!cell.resource) || ((!cell.resource) && cell.count < richness))
                         cell = { resource: name, count: richness }
                 }
             })
             grid[cords] = cell
-            // if (perlinNoise(x/25, y/25, 0) < .25)
-            //     grid[cords] = { resource: 'copper', count: 10 }
-            // else
-            //     grid[cords] = {}
         }
         return grid[cords]
     },
@@ -151,17 +149,6 @@ const grid = {
         grid[`${x}/${y}`] = value
     },
 }
-
-grid.set(0, 0, { resource: 'copper', count: 10 })
-grid.set(1, 1, { resource: 'copper', count: 10 })
-grid.set(2, 2, { resource: 'copper', count: 10 })
-grid.set(-1, 1, { resource: 'copper', count: 10 })
-grid.set(-2, 2, { resource: 'copper', count: 10 })
-grid.set(1, -1, { resource: 'copper', count: 10 })
-grid.set(2, -2, { resource: 'copper', count: 10 })
-grid.set(-1, -1, { resource: 'copper', count: 10 })
-grid.set(-2, -2, { resource: 'copper', count: 10 })
-
 
 //x / y are for the center, scale is the number of cells to show on the smallest side
 const viewPort = {
@@ -173,49 +160,39 @@ const viewPort = {
 const defaultBotColor = '#000'
 const backgroundColor = '#333'
 
-let menus = {
-    home: {
-        items: [
-            { name: 'Quick Actions', func() { } }
-        ],
-        onCreate(self) {
+const menuHeight = .2
 
-        }
-
+import * as Menu from './Menu.js'
+Menu.setCtx(ctx)
+Menu.setMenu('home', {
+    items: [
+        { text: 'Quick Actions', func(self) { Menu.open('quick_actions') } },
+        { text: 'Tick', func(self) { } },
+        { text: 'Set Program', func(self) { } },
+        { text: 'Run Program', func(self) { } },
+        { text: 'Transfer Self', func(self) { } },
+        { text: 'Start Auto Tick', func(self) { } },
+        { text: 'Stop Auto Tick', func(self) { } },
+        { text: 'TEST MENU', func(self) { Menu.open('test_menu') } },
+    ]
+})
+Menu.setMenu('quick_actions', {
+    items: [
+        { text: 'Move Self', func(self) { } },
+        { text: 'Move Item', func(self) { } },
+        { text: 'Harvest', func(self) { } },
+        { text: 'Craft', func(self) { } },
+        { text: 'Change Mode', func(self) { } },
+    ]
+})
+Menu.setMenu('test_menu', {
+    onCreate(self) {
+        self.items = []
+        for (let i = 0; i < 25; i++)
+            self.items.push({ text: `Item ${i}`, func() { } })
     }
-}
+})
 
-const Menu = {
-    menus: {
-        home: {
-            items: [
-                { name: 'Quick Actions', func() { } }
-            ],
-        }
-    },
-    stack: [],
-    currentInput: '',
-    selected: '',
-    back() {
-        if (Menu.stack > 1) {
-            Menu.pop()
-            const newMenu = Menu.menus[Menu.stack(Menu.stack.length - 1)]
-            if (newMenu.onCreate)
-                newMenu.onCreate(newMenu)
-        }
-    },
-    open(target) {
-        Menu.stack.push(target)
-        const newMenu = Menu.menus[target]
-        if (newMenu.onCreate)
-            newMenu.onCreate(newMenu)
-
-    },
-    handleKey(key) {
-        console.log(key)
-    }
-}
-document.addEventListener('keypress', event => Menu.handleKey(event.key))
 
 function render() {
     //clear the screen with a bright flashy color
@@ -253,27 +230,30 @@ function render() {
             )
         }
 
-    ctx.fillStyle = '#00ff0066'
+    //show where the viewpoint is
+    ctx.fillStyle = '#0f06'
     ctx.fillRect(Math.floor(middleX - halfCellSize), Math.floor(middleY - halfCellSize), cellSize, cellSize)
-    //render the menus
 
 }
 
 setInterval(() => {
     if (currentKeys.includes('w'))
-        viewPort.y -= viewPort.scale / 50
+        viewPort.y -= viewPort.scale / 100
     if (currentKeys.includes('d'))
-        viewPort.x += viewPort.scale / 50
+        viewPort.x += viewPort.scale / 100
     if (currentKeys.includes('s'))
-        viewPort.y += viewPort.scale / 50
+        viewPort.y += viewPort.scale / 100
     if (currentKeys.includes('a'))
-        viewPort.x -= viewPort.scale / 50
+        viewPort.x -= viewPort.scale / 100
     if (currentKeys.includes('e'))
-        viewPort.scale = Math.max(viewPort.scale * .9, 1)
+        viewPort.scale = Math.max(viewPort.scale * .99, 1)
     if (currentKeys.includes('q'))
-        viewPort.scale *= 1.1
-    console.log(grid.get(Math.round(viewPort.x), Math.round(viewPort.y)).count)
-    render()
+        viewPort.scale *= 1.01
+
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // render()
+    Menu.render(50, canvas.height * 1)
 }, 0)
 
 let currentKeys = []
@@ -282,7 +262,6 @@ document.addEventListener('keyup', event => {
         currentKeys.splice(currentKeys.indexOf(event.key), 1)
 })
 document.addEventListener('keydown', event => currentKeys.push(event.key))
-
 
 /*
 
@@ -320,9 +299,11 @@ items with a ? can only be run in certain modes
 ~ * ? craft(recipeName, toSlot, count): crafts the recipe putting the results into toSlot, returns true if crafting succeeded
 ~ * changeMode(mode): starts changing bots mode, returns false if the mode is invalid
 ~ * ? placeBot(dir, fromSlot): places a new bot at dir, taking from slot, returns true if bot placed
+~ * ? destroyBlock(dir, toSlot): removes any resource at the dir and putting 1 resource in toSlot, if there is a bot it will be picked up and placed in toSlot, returns true on success
+~ * ? destroyItem(slot): destroys all items in said slot
 
 Tech:
-~ the tech has to be selected by the player
+~ the tech has to be input by the player
 ~ tech unlocks things like new recipes, new minable resources, new botCommands (such as global mem, etc), new modes
 ~ to win you must research and craft something hard
 ~ to unlock tech you sell items (partial sells can be done, and the tech will be closer to being unlocked)
@@ -343,6 +324,7 @@ Modes:
 ~ Mobile: can move
 ~ Crafter: can craft
 ~ Builder: can change other bots program + build bots
+~ Destroyer: can destroy resources nodes + pick up bots + destroy items
 
 Misc:
 ~ the bot gets one action per turn
@@ -364,7 +346,7 @@ Bot File Structure:
 
 Bot Program Usage:
 ~ each bot has its own program, whose name is the same as the bots id
-~ to set a bot program, a source program is selected, and then copied for the bot (this is to prevent unwanted communications between bots)
+~ to set a bot program, a source program is input, and then copied for the bot (this is to prevent unwanted communications between bots)
 ~ each bot program is a plain .js program (located in ), where it can get game element with 'const Game = require('../GameIO.js')
 ~ the bots program will be run in its entirety each tick
 ~ GameIO.js will just require the stuff from here (script.js) and re export them, this is to create a smoother user experience without having to rename my program
@@ -389,7 +371,6 @@ Command Line Menus:
 ~ tick
 ~ setProgram
 ~ runProgram
-
 
 Todo:
 ~ use some kind of noise to generate the resources
