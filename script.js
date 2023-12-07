@@ -289,12 +289,6 @@ import * as Menu from './utils/Menu.js'
             { text: 'Decrease Text Size', func(self) { } },
         ]
     })
-    // Menu.setCorrectColor('#0f0')
-    // Menu.setNormalColor('#060')
-    // Menu.setHighlightedColor('#0f03')
-    // Menu.setBackgroundColor('#000')
-    // Menu.setInfoColor('#006')
-    // Menu.setTitleColor('#00f')
     Menu.setMaxHeight(canvas.height*.2)
     Menu.setFont('Silkscreen')
     Menu.setCenterTitle(true)

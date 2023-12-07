@@ -237,6 +237,12 @@ export function render() {
         //set the font
         ctx.font = `${textSize}px ${font}`
 
+        //render the input
+        if (input.length > 0) {
+            ctx.fillStyle = inputColor
+            ctx.fillText(Date.now() % 1000 < 500 ? `${input}_` : input, 0, topY - textSize)
+        }
+
         //sort the items
         let correctItems = []
         let invalidItems = []
@@ -247,12 +253,7 @@ export function render() {
             else
                 correctItems.push(item)
         })
-
         const allItems = [...correctItems, ...invalidItems]
-
-        //render the input
-        ctx.fillStyle = inputColor
-        ctx.fillText(input, 0, topY - textSize)
 
         //render the title
         if (currentMenu.title) {
