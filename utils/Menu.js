@@ -30,11 +30,12 @@ export function back() {
     input = ''
     selected = ''
 }
+
 /**
  * Open a menu
  * @param {string} name 
  */
-export function open(name) {
+export async function open(name) {
 
     //add the new menu to the stack
     stack.push(name)
@@ -44,7 +45,11 @@ export function open(name) {
 
     //run the onCreate export function, if applicable
     if (newMenu.onCreate)
-        newMenu.onCreate(newMenu)
+        try {
+            await newMenu.onCreate(newMenu)
+        } catch (err) {
+            console.error(err)
+        }
 
     //reset input / selected
     input = ''
@@ -56,7 +61,7 @@ export function open(name) {
  * @param {string} mode 
  * @param {object} event 
  */
-export function handleKey(key, mode, event) {
+export async function handleKey(key, mode, event) {
 
     //prevent bugs caused by no menus
     if (menus.length == 0) return
@@ -66,7 +71,7 @@ export function handleKey(key, mode, event) {
 
     //open the default menu if any arrow key or escape is pressed and the menu is closed
     if (mode == 'up' && stack.length == 0 && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Escape'].includes(key)) {
-        open(defaultMenu)
+        await open(defaultMenu)
     }
 
     //when left arrow is released remove the last char from input, or go back a menu if input is empty
@@ -420,6 +425,6 @@ export function setCenterTitle(value) { centerTitle = value }
 export function setTextSize(value) { textSize = value }
 
 
-document.addEventListener('keypress', event => handleKey(event.key, 'press', event))
-document.addEventListener('keyup', event => handleKey(event.key, 'up', event))
-document.addEventListener('keydown', event => handleKey(event.key, 'down', event))
+document.addEventListener('keypress', async (event) => await handleKey(event.key, 'press', event))
+document.addEventListener('keyup', async (event) => await handleKey(event.key, 'up', event))
+document.addEventListener('keydown', async (event) => await handleKey(event.key, 'down', event))

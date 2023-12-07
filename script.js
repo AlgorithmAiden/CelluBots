@@ -54,48 +54,56 @@ import * as Menu from './utils/Menu.js'
         return results
     }
 
+    //grab the permissions, and create needed files
+    await (async () => {
 
-    // await (async () => {
+        //make the user select a folder for the game
+        await new Promise(r => document.getElementById('getFolderButton').onclick = async () => {
+            try {
+                folderHandle = await window.showDirectoryPicker();
+            } catch (error) {
+                location.reload()
+            }
+            r()
+        })
 
-    //     //make the user select a folder for the game
-    //     await new Promise(r => document.getElementById('getFolderButton').onclick = async () => {
-    //         try {
-    //             folderHandle = await window.showDirectoryPicker();
-    //         } catch (error) {
-    //             location.reload()
-    //         }
-    //         r()
-    //     })
+        // //force the write files / delete files permissions
+        // try {
+        //     // await createAndWriteFile(folderHandle, 'IGNORE_ME.txt', 'Goodbye World :[')
+        //     // await deleteFile(folderHandle, 'IGNORE_ME.txt')
+        // } catch {
+        //     // location.reload()
+        // }
 
-    //     //force the write files / delete files permissions
-    //     try {
-    //         await createAndWriteFile(folderHandle, 'IGNORE_ME.txt', 'Goodbye World :[')
-    //         await deleteFile(folderHandle, 'IGNORE_ME.txt')
-    //     } catch {
-    //         location.reload()
-    //     }
+        //create the playerPrograms / botPrograms folders if needed
+        let playerPrograms, botPrograms;
+        (await scanFolder(folderHandle)).forEach(file => {
+            if (file.name == 'playerPrograms' && file.kind == 'directory') {
+                playerPrograms = true
+                playerFolderHandle = file
+            }
+            if (file.name == 'botPrograms' && file.kind == 'directory') {
+                botPrograms = true
+                botFolderHandle = file
+            }
+        })
+        if (!playerPrograms)
+            playerFolderHandle = await createDirectory(folderHandle, 'playerPrograms')
+        if (!botPrograms)
+            botFolderHandle = await createDirectory(folderHandle, 'botPrograms')
 
-    //     //create the playerPrograms / botPrograms folders if needed
-    //     let playerPrograms, botPrograms;
-    //     (await scanFolder(folderHandle)).forEach(file => {
-    //         if (file.name == 'playerPrograms' && file.kind == 'directory') {
-    //             playerPrograms = true
-    //             playerFolderHandle = file
-    //         }
-    //         if (file.name == 'botPrograms' && file.kind == 'directory') {
-    //             botPrograms = true
-    //             botFolderHandle = file
-    //         }
-    //     })
-    //     if (!playerPrograms)
-    //         playerFolderHandle = await createDirectory(folderHandle, 'playerPrograms')
-    //     if (!botPrograms)
-    //         botFolderHandle = await createDirectory(folderHandle, 'botPrograms')
+        //remove the button
+        document.getElementById('getFolderButton').remove()
+    })()
 
-    //     //remove the button
-    //     document.getElementById('getFolderButton').remove()
-    // })()
-
+    function simpleHash(str, maxLength) {
+        let hash = 0
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i)
+            hash |= 0
+        }
+        return Math.abs(hash).toString(32)
+    }
 
     //this is the seed controlling all world generation
     const firstSeed = Math.random() * 100
@@ -266,7 +274,8 @@ import * as Menu from './utils/Menu.js'
             { text: 'Quick Actions', func(parentMenu, self) { Menu.open('quick_actions') } },
             { text: 'Toggle Auto Tick', info: 'Currently is off', func(parentMenu, self) { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
             { text: 'Tick', func(parentMenu, self) { oneTick = true } },
-            { text: 'Set Program', func(parentMenu, self) { } },
+            { text: 'Read Self Info', func() { Menu.open('self_info') } },
+            { text: 'Set Self Program', async func(parentMenu, self) { await Menu.open('set_self_program') } },
             { text: 'Run Program', func(parentMenu, self) { } },
             { text: 'Settings', func(parentMenu, self) { Menu.open('settings') } },
             { text: 'Save Game', func(parentMenu, self) { } },
@@ -280,7 +289,7 @@ import * as Menu from './utils/Menu.js'
             { text: 'Harvest', func(self) { } },
             { text: 'Craft', func(self) { } },
             { text: 'Change Mode', func(self) { } },
-            { text: 'Transfer Self', func(self) { } },
+            { text: 'Transfer Player', func(self) { Menu.open('transfer_player') } },
         ]
     })
     Menu.setMenu('settings', {
@@ -289,7 +298,136 @@ import * as Menu from './utils/Menu.js'
             { text: 'Decrease Text Size', func(self) { } },
         ]
     })
-    Menu.setMaxHeight(canvas.height*.2)
+    Menu.setMenu('set_self_program', {
+        title: 'Choose new program',
+        async onCreate(self) {
+            self.items = []
+            const scan = await scanFolder(playerFolderHandle)
+            scan.forEach(handle => {
+                self.items.push({
+                    text: handle.name,
+                    func(parentMenu, self) { }
+                })
+            })
+        }
+    })
+    Menu.setMenu('transfer_player', {
+        title: 'Transfer direction?',
+        items: [
+            {
+                text: 'Up', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x, currentBot.y - 1).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                    console.log(currentBot, newId)
+                }
+            },
+            {
+                text: 'Right', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x + 1, currentBot.y).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                    console.log(currentBot, newId)
+                }
+            },
+            {
+                text: 'Down', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x, currentBot.y + 1).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                    console.log(currentBot, newId)
+                }
+            },
+            {
+                text: 'Left', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x - 1, currentBot.y).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                    console.log(currentBot, newId)
+                }
+            },
+        ]
+    })
+    Menu.setMenu('self_info', {
+        title: 'Last updated on open',
+        items: [
+            { text: 'x', func(parentMenu, self) { self.info = String(bots[hauntedBotId].x) } },
+            { text: 'y', func(parentMenu, self) { self.info = String(bots[hauntedBotId].y) } },
+            { text: 'mode', func(parentMenu, self) { self.info = bots[hauntedBotId].mode } },
+            { text: 'source', func(parentMenu, self) { self.info = bots[hauntedBotId].source } },
+            {
+                text: 'slot 0', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[0]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 1', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[1]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 2', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[2]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 3', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[3]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 4', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[4]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 5', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[5]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 6', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[6]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 7', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[7]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+            {
+                text: 'slot 8', func(parentMenu, self) {
+                    const slot = bots[hauntedBotId].inventory[8]
+                    if (slot.count == 0) self.info = 'Empty'
+                    else self.info = `${slot.count} ${slot.type}`
+                }
+            },
+        ],
+        onCreate(self) {
+            self.items.forEach(item => item.func(self, item))
+        }
+    })
+    Menu.setMaxHeight(canvas.height * .2)
     Menu.setFont('Silkscreen')
     Menu.setCenterTitle(true)
     Menu.open('home')
@@ -541,11 +679,12 @@ import * as Menu from './utils/Menu.js'
 
         if (autoTick || oneTick) {
             runBots()
-            viewPort.x = bots[hauntedBotId].x
-            viewPort.y = bots[hauntedBotId].y
             oneTick = false
             console.log('Tick')
         }
+
+        viewPort.x = bots[hauntedBotId].x
+        viewPort.y = bots[hauntedBotId].y
 
         ctx.fillStyle = '#000'
         ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -597,6 +736,7 @@ import * as Menu from './utils/Menu.js'
     ~ * B placeBot(dir, fromSlot): places a new bot at dir, taking from slot, returns true if bot placed
     ~ * D destroyBlock(dir, toSlot): removes any resource at the dir and putting 1 resource in toSlot, if there is a bot it will be picked up and placed in toSlot, returns true on success
     ~ * D destroyItem(slot): destroys all items in said slot
+    ~ transferPlayer(dir): transfers the player to the bot at dir, returns true on success
     items with a * cost an actionPoint (there is one actionPoint per turn) (the action will be used if the function runs successfully)
     items with a Mode can only be preformed by said mode
     key: H: Harvester, M: Mobile, C: Crafter, B: Builder, D: Destroyer, T: Transferer
@@ -656,22 +796,14 @@ import * as Menu from './utils/Menu.js'
     ~ other than that, the player will be the same as the robots
     ~ using a command line interface to make some actions easier
     
-    Command Line Menus:
-    ~ moveSelf: (tries to move)
-    ~ ~ up
-    ~ ~ right
-    ~ ~ down
-    ~ ~ left
-    ~ moveItems:
-    ~ ~ from:
-    ~ ~ ~ to:
-    ~ ~ ~ ~ count:
-    ~ tick
-    ~ setProgram
-    ~ runProgram
-    
     Todo:
-    ~ use some kind of noise to generate the resources
+    ~ add save / load
+    ~ add tech
+    ~ add crafting
+    ~ make the game downloadable
+    ~ add settings
+    ~ make the browser remember file permissions
+
      */
 
     // const worker = new Worker('./botRunner.js')
