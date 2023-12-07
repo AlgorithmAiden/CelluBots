@@ -1,15 +1,22 @@
-let ctx
-let defaultMenu = 'home'
-let backgroundColor = '#000'
-let invalidColor = '#f00'
-let normalColor = '#fff'
-let correctColor = '#0f0'
-let highlightedColor = '#fff6'
-let menus = {}
-let stack = []
-let input = ''
-let selected = ''
-let font = 'Times New Roman'
+export let ctx
+export let defaultMenu = 'home'
+export let backgroundColor = '#000'
+export let invalidColor = '#f00'
+export let normalColor = '#fff'
+export let correctColor = '#0f0'
+export let highlightedColor = '#fff6'
+export let titleColor = '#66f'
+export let infoColor = '#0ff'
+export let inputColor = '#0f0'
+export let centerTitle = false
+export let padding = 0
+export let maxHeight = canvas.height * .2
+export let font = 'Times New Roman'
+export let textSize = 20
+export let menus = {}
+export let stack = []
+export let input = ''
+export let selected = ''
 /**
  * Go back one menu
  */
@@ -50,6 +57,9 @@ export function open(name) {
  * @param {object} event 
  */
 export function handleKey(key, mode, event) {
+
+    //prevent bugs caused by no menus
+    if (menus.length == 0) return
 
     //prevent tabbing
     if (key == 'Tab') event.preventDefault()
@@ -141,14 +151,14 @@ export function handleKey(key, mode, event) {
             //find and run the export function for input
             currentMenu.items.forEach(item => {
                 if (item.text.toLocaleLowerCase() == input.toLocaleLowerCase())
-                    item.func(currentMenu)
+                    item.func(currentMenu, item)
             })
         } else {
 
             //find and run the export function for selected
             currentMenu.items.forEach(item => {
                 if (item.text == selected)
-                    item.func(currentMenu)
+                    item.func(currentMenu, item)
             })
         }
     }
@@ -173,57 +183,53 @@ export function handleKey(key, mode, event) {
         input += key
     }
 }
-export function render(textSize, maxHeight) {
+/**
+ * Renders the current menu at the top of the screen
+ */
+export function render() {
 
-    //only run the renders if open
+    //only run if a menu is open
     if (stack.length > 0) {
 
-        //use gradients to keep the text in the box
-        let regularGrad, correctGrad, invalidGrad
-        if (input.length > 0) {
-
-            //offset the lines if there is any chars typed
-            regularGrad = ctx.createLinearGradient(0, textSize, 0, maxHeight)
-            regularGrad.addColorStop(0, '#0000')
-            regularGrad.addColorStop(.001, normalColor)
-            regularGrad.addColorStop(.999, normalColor)
-            regularGrad.addColorStop(1, '#0000')
-            correctGrad = ctx.createLinearGradient(0, textSize, 0, maxHeight)
-            correctGrad.addColorStop(0, '#0000')
-            correctGrad.addColorStop(.001, correctColor)
-            correctGrad.addColorStop(.999, correctColor)
-            correctGrad.addColorStop(1, '#0000')
-            invalidGrad = ctx.createLinearGradient(0, textSize, 0, maxHeight)
-            invalidGrad.addColorStop(0, '#0000')
-            invalidGrad.addColorStop(.001, invalidColor)
-            invalidGrad.addColorStop(.999, invalidColor)
-            invalidGrad.addColorStop(1, '#0000')
-        } else {
-
-            //otherwise only cut off the bottom
-            regularGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            regularGrad.addColorStop(.999, normalColor)
-            regularGrad.addColorStop(1, '#0000')
-            correctGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            correctGrad.addColorStop(.999, correctColor)
-            correctGrad.addColorStop(1, '#0000')
-            invalidGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            invalidGrad.addColorStop(.999, invalidColor)
-            invalidGrad.addColorStop(1, '#0000')
-        }
+        //save the max height for shrinking
+        let localMaxHeight = maxHeight
 
         //hold the menu
         const currentMenu = menus[stack[stack.length - 1]]
 
+        //use gradients to keep the text in the box
+        let regularGrad, correctGrad, invalidGrad
+
+        let topY = 0
+        if (input.length > 0) topY += textSize
+        if (currentMenu.title) topY += textSize
+
+        //offset the lines if there is any chars typed
+        regularGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        regularGrad.addColorStop(0, '#0000')
+        regularGrad.addColorStop(.001, normalColor)
+        regularGrad.addColorStop(.999, normalColor)
+        regularGrad.addColorStop(1, '#0000')
+        correctGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        correctGrad.addColorStop(0, '#0000')
+        correctGrad.addColorStop(.001, correctColor)
+        correctGrad.addColorStop(.999, correctColor)
+        correctGrad.addColorStop(1, '#0000')
+        invalidGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        invalidGrad.addColorStop(0, '#0000')
+        invalidGrad.addColorStop(.001, invalidColor)
+        invalidGrad.addColorStop(.999, invalidColor)
+        invalidGrad.addColorStop(1, '#0000')
+
         //shrink the menu if it is larger than needed
-        maxHeight = Math.min(
-            maxHeight,
-            currentMenu.items.length * textSize
+        localMaxHeight = Math.min(
+            localMaxHeight,
+            currentMenu.items.length * textSize + topY
         )
 
         //draw the background
         ctx.fillStyle = backgroundColor
-        ctx.fillRect(0, 0, canvas.width, maxHeight)
+        ctx.fillRect(0, 0, canvas.width, localMaxHeight)
 
         //ensure the text baseline is correct
         ctx.textBaseline = 'top'
@@ -232,19 +238,30 @@ export function render(textSize, maxHeight) {
         ctx.font = `${textSize}px ${font}`
 
         //sort the items
-        let invalidItems = []
         let correctItems = []
+        let invalidItems = []
         currentMenu.items.forEach(item => {
             const lowerText = item.text.toLocaleLowerCase()
             if (lowerText.length < input.length || lowerText.slice(0, input.length) != input.toLocaleLowerCase())
-                invalidItems.push(item.text)
+                invalidItems.push(item)
             else
-                correctItems.push(item.text)
+                correctItems.push(item)
         })
 
+        const allItems = [...correctItems, ...invalidItems]
+
         //render the input
-        ctx.fillStyle = '#0f0'
-        ctx.fillText(input, 0, 0)
+        ctx.fillStyle = inputColor
+        ctx.fillText(input, 0, topY - textSize)
+
+        //render the title
+        if (currentMenu.title) {
+            ctx.fillStyle = titleColor
+            if (centerTitle)
+                ctx.fillText(currentMenu.title, (canvas.width - ctx.measureText(currentMenu.title).width) / 2, 0)
+            else
+                ctx.fillText(currentMenu.title, padding, 0)
+        }
 
         //ignore case
         const lowerInput = input.toLocaleLowerCase()
@@ -260,69 +277,60 @@ export function render(textSize, maxHeight) {
             selectedIndex = 0
         else
             //or find the selected items index
-            [...correctItems, ...invalidItems].forEach((text, index) => {
-                if (text == selected)
+            allItems.forEach((item, index) => {
+                if (item.text == selected)
                     selectedIndex = index
             })
-
 
 
         // handle scrolling
         y = -Math.min(
             Math.max(
-                selectedIndex * textSize - y - maxHeight / 2,
-                -y
+                selectedIndex * textSize - topY - localMaxHeight / 2,
+                -topY
             ),
             Math.max(
-                currentMenu.items.length * textSize - maxHeight,
-                -y
+                currentMenu.items.length * textSize - localMaxHeight,
+                -topY
             ),
         )
 
-        //render the correct items
-        correctItems.forEach(text => {
+        //render the items
+        allItems.forEach(item => {
 
             //only run if it will be seen
-            if (y >= -textSize && y <= maxHeight) {
+            if (y >= -textSize && y <= localMaxHeight) {
+
+                //render the info if any
+                if (item.info) {
+                    ctx.fillStyle = infoColor
+                    ctx.fillText(item.info, canvas.width - ctx.measureText(item.info).width - padding, y)
+                }
+
+                //hold the text
+                const text = item.text
 
                 //highlight if needed
                 if (text == selected) {
                     ctx.fillStyle = highlightedColor
-                    ctx.fillRect(0, y, canvas.width, Math.min(maxHeight - y, textSize))
+                    ctx.fillRect(0, y, canvas.width, Math.min(localMaxHeight - y, textSize))
                 }
 
                 //break into the two parts
-                let x = 0
-                const first = text.slice(0, lowerInput.length)
-                const second = text.slice(lowerInput.length)
+                const first = text.slice(0, input.length)
+                const second = text.slice(input.length)
 
                 //render both parts
-                ctx.fillStyle = correctGrad
-                ctx.fillText(first, 0, y)
+                if (first.toLocaleLowerCase() == lowerInput) ctx.fillStyle = correctGrad
+                else ctx.fillStyle = invalidGrad
+                ctx.fillText(first, padding, y)
                 ctx.fillStyle = regularGrad
-                ctx.fillText(second, ctx.measureText(first).width, y)
+                ctx.fillText(second, padding + ctx.measureText(first).width, y)
             }
+
+            //offset the next line
             y += textSize
-        })
 
-        //render all the invalid items
-        ctx.fillStyle = invalidGrad
-        invalidItems.forEach(text => {
-
-            //only run if it will be seen
-            if (y >= -textSize && y <= maxHeight) {
-
-                //highlight if needed
-                if (text == selected) {
-                    ctx.fillStyle = highlightedColor
-                    ctx.fillRect(0, y, canvas.width, Math.min(maxHeight - y, textSize))
-                    ctx.fillStyle = invalidGrad
-                }
-
-                //render the text
-                ctx.fillText(text, 0, y)
-            }
-            y += textSize
         })
     }
 }
@@ -379,6 +387,37 @@ export function setCtx(value) { ctx = value }
  * @param {string} value 
  */
 export function setFont(value) { font = value }
+/**
+ * The color for item info
+ * @param {string} value 
+ */
+export function setInfoColor(value) { infoColor = value }
+/**
+ * The color for titles
+ * @param {string} value 
+ */
+export function setTitleColor(value) { titleColor = value }
+/**
+ * The color for the input
+ * @param {string} value 
+ */
+export function setInputColor(value) { inputColor = value }
+/**
+ * The maximum height for the menu
+ * @param {number} value 
+ */
+export function setMaxHeight(value) { maxHeight = value }
+/**
+ * The title centering
+ * @param {boolean} value 
+ */
+export function setCenterTitle(value) { centerTitle = value }
+/**
+ * The size for the text
+ * @param {number} value 
+ */
+export function setTextSize(value) { textSize = value }
+
 
 document.addEventListener('keypress', event => handleKey(event.key, 'press', event))
 document.addEventListener('keyup', event => handleKey(event.key, 'up', event))

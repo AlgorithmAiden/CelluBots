@@ -24,7 +24,7 @@ const waitForMessage = async () => {
 }
 
     ;
-(async () => {
-    self.postMessage(0)
-    while (true) self.postMessage(await waitForMessage())
-})()
+// (async () => {
+//     self.postMessage(0)
+//     while (true) self.postMessage(await waitForMessage())
+// })()
