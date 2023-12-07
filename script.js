@@ -1,5 +1,5 @@
 //this is the seed controlling all world generation
-const firstSeed = 300
+const firstSeed = Math.random() * 100
 
 //gives a random number 0-1
 const random = (() => {
@@ -50,9 +50,7 @@ const perlinNoise = (() => {
             129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
             251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
             49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
-            138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180
-        ]
-
+            138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180]
         for (var i = 0; i < 256; i++)
             p[256 + i] = p[i] = permutation[i]
 
@@ -154,11 +152,11 @@ const grid = {
 const viewPort = {
     x: 0,
     y: 0,
-    scale: 5
+    scale: 100
 }
 
 //this is the bot the player controls / the viewfinder is tied to
-let hauntedBotId = 250
+let hauntedBotId = 50
 
 const backgroundColor = '#333'
 
@@ -167,11 +165,10 @@ Menu.setCtx(ctx)
 Menu.setMenu('home', {
     items: [
         { text: 'Quick Actions', func(self) { Menu.open('quick_actions') } },
-        { text: 'Tick', func(self) { } },
+        { text: 'Toggle Auto Tick', func(self) { autoTick = !autoTick } },
+        { text: 'Tick', func(self) { oneTick = true } },
         { text: 'Set Program', func(self) { } },
         { text: 'Run Program', func(self) { } },
-        { text: 'Transfer Self', func(self) { } },
-        { text: 'Toggle Auto Tick', func(self) { } },
         { text: 'Settings', func(self) { Menu.open('settings') } },
         { text: 'Save Game', func(self) { } },
         { text: 'Load Game', func(self) { } },
@@ -184,6 +181,7 @@ Menu.setMenu('quick_actions', {
         { text: 'Harvest', func(self) { } },
         { text: 'Craft', func(self) { } },
         { text: 'Change Mode', func(self) { } },
+        { text: 'Transfer Self', func(self) { } },
     ]
 })
 Menu.setMenu('settings', {
@@ -192,7 +190,10 @@ Menu.setMenu('settings', {
         { text: 'Decrease Text Size', func(self) { } },
     ]
 })
-Menu.setBackgroundColor('#0006')
+Menu.setCorrectColor('#0f0')
+Menu.setNormalColor('#060')
+Menu.setHighlightedColor('#0f03')
+Menu.setBackgroundColor('#000')
 Menu.setFont('Droid Sans Mono')
 
 const stackSize = 100
@@ -207,6 +208,7 @@ const botModes = [
     'Crafter',
     'Builder',
     'Destroyer',
+    'Transferer',
 ]
 botModes.forEach((mode, index) => {
     const color = Colors.createColor()
@@ -233,15 +235,8 @@ function createBot(x, y, mode = 'Blank') {
     nextBotId++
 }
 
-for (let i = -250; i < 250; i++)
+for (let i = -50; i < 50; i++)
     createBot(0, i)
-
-// createBot(0, 0)
-// createBot(2, 1, 'Destroyer')
-// createBot(-1, 2, 'Mobile')
-// createBot(-2, 0, 'Crafter')
-// createBot(1, -3, 'Builder')
-// createBot(2, -1, 'Harvester')
 
 const runBots = (() => {
     let hasAction
@@ -323,10 +318,14 @@ const runBots = (() => {
             const x = bot.x
             const y = bot.y
             hasAction = true
-            // if (bot.id == hauntedBotId)
-            //     console.log(bot)
 
-            if (bot.inventory[0].count == stackSize && bot.x > 0)
+            if (!['Mobile', 'Harvester'].includes(bot.mode)) {
+                if (random() < .01)
+                    changeMode('Harvester', bot)
+            } else if (random() < .01)
+                changeMode(['Builder', 'Crafter', 'Destroyer'][Math.floor(random() * 3)], bot)
+
+            else if (bot.inventory[0].count == stackSize && bot.x > 0)
                 if (bot.mode != 'Mobile')
                     changeMode('Mobile', bot)
                 else
@@ -432,30 +431,30 @@ function renderGrid() {
     })
 }
 
+let autoTick = false
+let oneTick = false
+
 setInterval(() => {
     if (Menu.getStack().length == 0) {
-        if (currentKeys.includes('w'))
-            viewPort.y -= viewPort.scale / 100
-        if (currentKeys.includes('d'))
-            viewPort.x += viewPort.scale / 100
-        if (currentKeys.includes('s'))
-            viewPort.y += viewPort.scale / 100
-        if (currentKeys.includes('a'))
-            viewPort.x -= viewPort.scale / 100
         if (currentKeys.includes('e'))
-            viewPort.scale = Math.max(viewPort.scale * .99, 1)
+            viewPort.scale = Math.max(viewPort.scale * .99, -Infinity)
         if (currentKeys.includes('q'))
             viewPort.scale *= 1.01
     }
 
-    runBots()
-    viewPort.x = bots[hauntedBotId].x
-    viewPort.y = bots[hauntedBotId].y
+    if (autoTick || oneTick) {
+        runBots()
+        viewPort.x = bots[hauntedBotId].x
+        viewPort.y = bots[hauntedBotId].y
+        oneTick = false
+        console.log('Tick')
+    }
 
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     renderGrid()
     Menu.render(30, canvas.height * .2)
+
 }, 0)
 
 let currentKeys = []
@@ -470,8 +469,8 @@ document.addEventListener('keydown', event => currentKeys.push(event.key))
 Cell Structure:
 ~ there are three types of cells:
 ~ ~ blank, represented by {}
-~ ~ resource: represented by { resource: 'copper', count: 10 }
-~ ~ bot: represented by { botId: 17 }
+~ ~ resource: represented by { resource: string, count: number }
+~ ~ bot: represented by { botId: number }
 ~ since there are only three types of cells, this can speed up a lot of things
 
 Bot Structure:
@@ -483,26 +482,36 @@ Bot Structure:
 ~ every bot will know its position in the grid / mode / id / inventory
 ~ every bot has its own memory accessible by other bots nearby / itself, but it can only hold Number / String / Boolean / Array / Object types (for communicating between bots)
 
-Bot Commands: 
-items with a * cost an action (there is one action per turn) (the action will be used if the function runs successfully)
-items with a ? can only be run in certain modes
-~ * ? moveBot(dir): tries to move the direction, returns true if the move worked
+Bot Commands:
+~ * M moveBot(dir): tries to move the direction, returns true if the move worked
 ~ moveItem(fromSlot, toSlot, count = stackSize): tries to move items from one slot to another, returns true if move worked
 ~ readSlot(slot): returns the items (if any) in the slot
-~ look(dir): returns the cell next in the direction (type, resourceType, resourceCount, botId) (read only)
-~ readInventory(dir): returns the inventory of the bot at dir, or false if there is no bot
-~ * ? harvest(dir, slot): harvests one item from the dir and puts it in slot (if there is space in slot), returns true if an item was harvested (will always return false if there is no resource to harvest)
+~ look(dir): returns the cell next in the direction (resource, count, botId) (read only)
+~ readBot(dir): returns the bot info at dir (inventory, id, mode), returns false if there is no bot at dir
+~ * H harvest(dir, slot): harvests one item from the dir and puts it in slot (if there is space in slot), returns true if an item was harvested (will always return false if there is no resource to harvest)
 ~ setSelfProgram(programName): sets its own program to programName, returns false if programName is invalid (current program will still finish)
-~ ? setOtherProgram(programName, dir): sets the program of the bot at dir to programName, returns false if there is no bot or programName is invalid
+~ B setOtherProgram(programName, dir): sets the program of the bot at dir to programName, returns false if there is no bot or programName is invalid
 ~ getMem(dir): returns the mem of the bot at dir, or false if there is no bot
 ~ setMem(dir, mem): sets the mem of the bot at dir, returns true if there is a bot, otherwise false
-~ * ? takeItem(dir, fromSlot, toSlot, count): takes items from the bot at dir to self, returns true on success
-~ * ? giveItem(dir, fromSlot, toSlot, count): gives items from self to the bot at dir, returns true on success
-~ * ? craft(recipeName, toSlot, count): crafts the recipe putting the results into toSlot, returns true if crafting succeeded
-~ * changeMode(mode): starts changing bots mode, returns false if the mode is invalid
-~ * ? placeBot(dir, fromSlot): places a new bot at dir, taking from slot, returns true if bot placed
-~ * ? destroyBlock(dir, toSlot): removes any resource at the dir and putting 1 resource in toSlot, if there is a bot it will be picked up and placed in toSlot, returns true on success
-~ * ? destroyItem(slot): destroys all items in said slot
+~ * T takeItem(dir, fromSlot, toSlot, count): takes items from the bot at dir to self, returns true on success
+~ * T giveItem(dir, fromSlot, toSlot, count): gives items from self to the bot at dir, returns true on success
+~ * C craft(recipeName, toSlot): crafts the recipe putting the results into toSlot, returns true if crafting succeeded
+~ * changeMode(mode): changes bot mode, returns false if the mode is invalid
+~ * B placeBot(dir, fromSlot): places a new bot at dir, taking from slot, returns true if bot placed
+~ * D destroyBlock(dir, toSlot): removes any resource at the dir and putting 1 resource in toSlot, if there is a bot it will be picked up and placed in toSlot, returns true on success
+~ * D destroyItem(slot): destroys all items in said slot
+items with a * cost an actionPoint (there is one actionPoint per turn) (the action will be used if the function runs successfully)
+items with a Mode can only be preformed by said mode
+key: H: Harvester, M: Mobile, C: Crafter, B: Builder, D: Destroyer, T: Transferer
+
+Modes:
+~ Blank: does nothing
+~ Harvester: can harvest resources
+~ Mobile: can move
+~ Crafter: can craft
+~ Builder: can change other bots program + build bots
+~ Destroyer: can destroy resource nodes + pick up bots + destroy items
+~ Transferer: can transfer items from bot to bot
 
 Tech:
 ~ the tech has to be input by the player
@@ -515,18 +524,11 @@ Tech:
     cost: [
         {name: 'gear', count: 100},
         {name: 'spring', count: 50}
-    ],
+    ],    
     unlocks: [
         {type: 'command', command: 'placeBot'}
-    ]
-} (file structure is not finalized)
-
-Modes:
-~ Harvester: can harvest resources
-~ Mobile: can move
-~ Crafter: can craft
-~ Builder: can change other bots program + build bots
-~ Destroyer: can destroy resources nodes + pick up bots + destroy items
+    ]    
+} (file structure is not finalized)    
 
 Misc:
 ~ the bot gets one action per turn
@@ -575,3 +577,11 @@ Todo:
 ~ use some kind of noise to generate the resources
  */
 
+const worker = new Worker('./botRunner.js')
+worker.postMessage(JSON.stringify({
+    1: 'console.log(\'Thing 1\')a'
+}))
+worker.onmessage = (e) => {
+    console.log((e.data))
+    worker.postMessage(e.data + 1)
+}

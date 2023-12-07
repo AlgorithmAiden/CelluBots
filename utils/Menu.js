@@ -54,8 +54,8 @@ export function handleKey(key, mode, event) {
     //prevent tabbing
     if (key == 'Tab') event.preventDefault()
 
-    //open the default menu if any arrow key is pressed and the menu is closed
-    if (mode == 'up' && stack.length == 0 && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(key)) {
+    //open the default menu if any arrow key or escape is pressed and the menu is closed
+    if (mode == 'up' && stack.length == 0 && ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Escape'].includes(key)) {
         open(defaultMenu)
     }
 
@@ -163,6 +163,11 @@ export function handleKey(key, mode, event) {
         input = ''
     }
 
+    //Escape will exit the current menu
+    else if (key == 'Escape' && mode == 'up') {
+        back()
+    }
+
     //add the key to input
     else if (mode == 'press' && key && !['Enter'].includes(key)) {
         input += key
@@ -197,13 +202,13 @@ export function render(textSize, maxHeight) {
 
             //otherwise only cut off the bottom
             regularGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            regularGrad.addColorStop(.999, '#fff')
+            regularGrad.addColorStop(.999, normalColor)
             regularGrad.addColorStop(1, '#0000')
             correctGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            correctGrad.addColorStop(.999, '#0f0')
+            correctGrad.addColorStop(.999, correctColor)
             correctGrad.addColorStop(1, '#0000')
             invalidGrad = ctx.createLinearGradient(0, 0, 0, maxHeight)
-            invalidGrad.addColorStop(.999, '#f00')
+            invalidGrad.addColorStop(.999, invalidColor)
             invalidGrad.addColorStop(1, '#0000')
         }
 
