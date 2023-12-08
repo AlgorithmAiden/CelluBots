@@ -345,7 +345,7 @@ import * as Menu from './utils/Menu.js'
     }
 
     //this is the bot the player controls / the viewfinder is tied to
-    let hauntedBotId = 50
+    let hauntedBotId = 0
 
     //the color for empty spaces
     const backgroundColor = '#333'
@@ -417,7 +417,6 @@ import * as Menu from './utils/Menu.js'
                     let newId = grid.get(currentBot.x, currentBot.y - 1).botId
                     if (newId != undefined)
                         hauntedBotId = newId
-                    console.log(currentBot, newId)
                 }
             },
             {
@@ -426,7 +425,6 @@ import * as Menu from './utils/Menu.js'
                     let newId = grid.get(currentBot.x + 1, currentBot.y).botId
                     if (newId != undefined)
                         hauntedBotId = newId
-                    console.log(currentBot, newId)
                 }
             },
             {
@@ -435,7 +433,6 @@ import * as Menu from './utils/Menu.js'
                     let newId = grid.get(currentBot.x, currentBot.y + 1).botId
                     if (newId != undefined)
                         hauntedBotId = newId
-                    console.log(currentBot, newId)
                 }
             },
             {
@@ -444,7 +441,6 @@ import * as Menu from './utils/Menu.js'
                     let newId = grid.get(currentBot.x - 1, currentBot.y).botId
                     if (newId != undefined)
                         hauntedBotId = newId
-                    console.log(currentBot, newId)
                 }
             },
         ]
@@ -455,7 +451,6 @@ import * as Menu from './utils/Menu.js'
             { text: 'x', func(parentMenu, self) { self.info = String(bots[hauntedBotId].x) } },
             { text: 'y', func(parentMenu, self) { self.info = String(bots[hauntedBotId].y) } },
             { text: 'mode', func(parentMenu, self) { self.info = bots[hauntedBotId].mode } },
-            { text: 'program', func(parentMenu, self) { self.info = bots[hauntedBotId].programName; console.log(bots[hauntedBotId]) } },
             {
                 text: 'slot 0', func(parentMenu, self) {
                     const slot = bots[hauntedBotId].inventory[0]
@@ -569,8 +564,9 @@ import * as Menu from './utils/Menu.js'
         nextBotId++
     }
 
-    for (let i = -50; i < 50; i++)
-        createBot(0, i)
+    // for (let i = -50; i < 50; i++)
+    //     createBot(0, i)
+    createBot(0, 0)
 
     const runBots = (() => {
 
@@ -580,22 +576,138 @@ import * as Menu from './utils/Menu.js'
         //it will need to be accessible out here
         let resolvePromise = () => { }
 
+        //secret code to end a bots time, so bots cannot interfere with each other
         let doneCode = ''
 
-        let currentBot = undefined
+        //the bot that should be running code
+        let bot = undefined
 
+        function cordsAtDir(x, y, dir) {
+            if (dir == 'up') return { x, y: y - 1 }
+            if (dir == 'right') return { x: x + 1, y }
+            if (dir == 'down') return { x, y: y + 1 }
+            if (dir == 'left') return { x: x - 1, y }
+        }
+
+        const messageFuncs = {
+            set_self_mode(mode) {
+                if (botCommands.hasAction && botModes.includes(mode)) {
+                    bot.inventory.forEach(slot => {
+                        if (slot.count > 0)
+                            return false
+                    })
+                    bot.mode = mode
+                    botCommands.hasAction = false
+                    return true
+                }
+                return false
+            },
+            move_self(dir) {
+                if (bot.mode != 'Mobile') return false
+                const x = bot.x
+                const y = bot.y
+                if (botCommands.hasAction && bot.mode == 'Mobile') {
+                    if (dir == 'up' && Object.keys(grid.get(x, y - 1)).length == 0) {
+                        bot.y--
+                        grid.set(x, y, {})
+                        grid.set(x, y - 1, { botId: bot.id })
+                        botCommands.hasAction = false
+                        return true
+                    }
+                    if (dir == 'right' && Object.keys(grid.get(x + 1, y)).length == 0) {
+                        bot.x++
+                        grid.set(x, y, {})
+                        grid.set(x + 1, y, { botId: bot.id })
+                        botCommands.hasAction = false
+                        return true
+                    }
+                    if (dir == 'down' && Object.keys(grid.get(x, y + 1)).length == 0) {
+                        bot.y++
+                        grid.set(x, y, {})
+                        grid.set(x, y + 1, { botId: bot.id })
+                        botCommands.hasAction = false
+                        return true
+                    }
+                    if (dir == 'left' && Object.keys(grid.get(x - 1, y)).length == 0) {
+                        bot.x--
+                        grid.set(x, y, {})
+                        grid.set(x - 1, y, { botId: bot.id })
+                        botCommands.hasAction = false
+                        return true
+                    }
+                }
+                return false
+            },
+            set_self_mem(mem) {
+                bot.mem = mem
+            },
+            set_other_mem(dir, mem) {
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                if (grid.get(targetCords.x, targetCords.y).botId != undefined)
+                    bots[grid.get(targetCords.x, targetCords.y).botId].mem = mem
+            },
+            get_self_info() {
+                return bot
+            },
+            look(dir) {
+                return grid.get(cordsAtDir(bot.x, bot.y, dir).x, cordsAtDir(bot.x, bot.y, dir).y)
+            },
+            harvest(dir, slot) {
+                if (!hasAction || bot.mode != 'Harvester') return false
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetCell = grid.get(targetCords.x, targetCords.y)
+                if (targetCell.resource == undefined) return false
+                const slotType = bot.inventory[slot].type
+                const slotCount = bot.inventory[slot].count
+                if (slotCount == stackSize || (slotCount > 0 && slotType != targetCell.resource)) return false
+                bot.inventory[slot] = {
+                    count: slotCount + 1,
+                    type: targetCell.resource
+                }
+                if (targetCell.count > 1)
+                    grid.set(targetCords.x, targetCords.y, { resource: targetCell.resource, count: targetCell.count - 1 })
+                else
+                    grid.set(targetCords.x, targetCords.y, {})
+                hasAction = false
+                return true
+            },
+            move_items(fromSlotIndex, toSlotIndex, maxCount) {
+                const fromSlot = bot.inventory[fromSlotIndex]
+                const toSlot = bot.inventory[toSlotIndex]
+                if (
+                    fromSlot.count == 0 ||
+                    toSlot.count == stackSize ||
+                    (toSlot.count > 0 &&
+                        fromSlot.type != toSlot.type)
+                ) return false
+                let moveCount = Math.min(
+                    maxCount,
+                    stackSize,
+                    fromSlot.count,
+                    stackSize - toSlot.count
+                )
+                if (fromSlot.count <= moveCount)
+                    bot.fromSlot = { type: '', count: 0 }
+                else
+                    bot.inventory[fromSlotIndex].count -= moveCount
+                if (toSlot.count == 0)
+                    bot.inventory[toSlotIndex] = { count: moveCount, type: fromSlot.type }
+                else
+                    bot.inventory[toSlotIndex].count += moveCount
+                return moveCount
+            }
+        }
+
+        //handle all the messages
         worker.onmessage = async (m) => {
-            if (currentBot != undefined) {
+            if (bot != undefined) {
                 const message = m.data
                 const command = message[0]
+                const args = message.splice(1)
                 if (command == doneCode)
                     resolvePromise()
-                else if (command == 'moveBot') {
-                }
-                else if (command == 'changeMode') {
-                    botCommands.changeMode(message[1], currentBot)
-                } else
-                    console.log(message)
+                else if (messageFuncs[command] != undefined)
+                    worker.postMessage(await messageFuncs[command](...args))
             }
         }
 
@@ -605,13 +717,13 @@ import * as Menu from './utils/Menu.js'
             const botIds = Object.keys(bots)
             for (let index = 0; index < botIds.length; index++) {
                 const botId = botIds[index]
-                currentBot = bots[botId]
+                bot = bots[botId]
                 botCommands.hasAction = true
                 doneCode = Math.floor(Math.random() * bigTen)
-                worker.postMessage({ key: doneCode, code: currentBot.programCode })
+                worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
                 await new Promise(async (resolve) => resolvePromise = resolve)
             }
-            currentBot = undefined
+            bot = undefined
         }
     })()
 
@@ -814,7 +926,6 @@ import * as Menu from './utils/Menu.js'
             [10, 'gear']
         ],
         mode: 'Harvester',
-        programCode: 'console.log('Hello World!')'
         programName: 'Hello World.js'
     }
     
@@ -836,6 +947,6 @@ import * as Menu from './utils/Menu.js'
     ~ make the game downloadable
     ~ add settings
     ~ make the browser remember file permissions
-
+ 
      */
 })()
