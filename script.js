@@ -95,98 +95,6 @@ import * as Menu from './utils/Menu.js'
         document.getElementById('getFolderButton').remove()
     })()
 
-    //hashes to base 36
-    function simpleHash(str) {
-        let hash = 0
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i)
-            hash |= 0
-        }
-        return Math.abs(hash).toString(32)
-    }
-
-    const botCommands = {
-        hasAction: false,
-        moveBot(dir, bot) {
-            const x = bot.x
-            const y = bot.y
-            if (botCommands.hasAction && bot.mode == 'Mobile') {
-                if (dir == 'up' && Object.keys(grid.get(x, y - 1)).length == 0) {
-                    bot.y--
-                    grid.set(x, y, {})
-                    grid.set(x, y - 1, { botId: bot.id })
-                    botCommands.hasAction = false
-                    return true
-                }
-                if (dir == 'right' && Object.keys(grid.get(x + 1, y)).length == 0) {
-                    bot.x++
-                    grid.set(x, y, {})
-                    grid.set(x + 1, y, { botId: bot.id })
-                    botCommands.hasAction = false
-                    return true
-                }
-                if (dir == 'down' && Object.keys(grid.get(x, y + 1)).length == 0) {
-                    bot.y++
-                    grid.set(x, y, {})
-                    grid.set(x, y + 1, { botId: bot.id })
-                    botCommands.hasAction = false
-                    return true
-                }
-                if (dir == 'left' && Object.keys(grid.get(x - 1, y)).length == 0) {
-                    bot.x--
-                    grid.set(x, y, {})
-                    grid.set(x - 1, y, { botId: bot.id })
-                    botCommands.hasAction = false
-                    return true
-                }
-            }
-            return false
-        },
-        changeMode(mode, bot) {
-            if (botCommands.hasAction && botModes.includes(mode)) {
-                bot.inventory.forEach(slot => {
-                    if (slot.count > 0)
-                        return false
-                })
-                bot.mode = mode
-                botCommands.hasAction = false
-                return true
-            }
-            return false
-        },
-        harvest(dir, slotIndex, bot) {
-            const x = bot.x
-            const y = bot.y
-            if (botCommands.hasAction && bot.mode == 'Harvester') {
-                let targetX = x
-                let targetY = y
-                if (dir == 'up') targetY--
-                else if (dir == 'right') targetX++
-                else if (dir == 'down') targetY++
-                else if (dir == 'left') targetX--
-                const targetCell = grid.get(targetX, targetY)
-                const slot = bot.inventory[slotIndex]
-                if (targetCell.count > 0 && (slot.count == 0) || (slot.count < stackSize && slot.type == targetCell.resource)) {
-                    bot.inventory[slotIndex].count++
-                    bot.inventory[slotIndex].type = targetCell.resource
-                    if (targetCell.count > 1)
-                        grid.set(targetX, targetY, { resource: targetCell.resource, count: targetCell.count - 1 })
-                    else
-                        grid.set(targetX, targetY, {})
-                    return true
-                } else return false
-            }
-            return false
-        },
-        async setProgram(handle, bot) {
-            bot.programCode = await readFile(handle)
-            bot.programName = handle.name.split('.')[0]
-        }
-    }
-
-    //all the programs will be stored here
-    let programs = {}
-
     //this is the seed controlling all world generation
     const firstSeed = Math.random() * 100
 
@@ -272,19 +180,19 @@ import * as Menu from './utils/Menu.js'
         copper: {
             color: '#ef7646',
             richness: 1000,
-            frequency: .2,
+            frequency: .4,
             scale: 20
         },
         iron: {
             color: '#aaaaff',
             richness: 1000,
-            frequency: .2,
+            frequency: .4,
             scale: 20
         },
         coal: {
             color: '#000000',
             richness: 1000,
-            frequency: .2,
+            frequency: .4,
             scale: 20
         }
     }
@@ -354,31 +262,11 @@ import * as Menu from './utils/Menu.js'
     Menu.setMenu('home', {
         title: 'This is the home menu',
         items: [
-            { text: 'Quick Actions', func(parentMenu, self) { Menu.open('quick_actions') } },
+            { text: 'Transfer Player', func() { Menu.open('transfer_player') } },
             { text: 'Toggle Auto Tick', info: 'Currently is off', func(parentMenu, self) { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
             { text: 'Tick', func(parentMenu, self) { oneTick = true } },
             { text: 'Read Self Info', func() { Menu.open('self_info') } },
             { text: 'Set Self Program', async func(parentMenu, self) { await Menu.open('set_self_program') } },
-            { text: 'Run Program', func(parentMenu, self) { } },
-            { text: 'Settings', func(parentMenu, self) { Menu.open('settings') } },
-            { text: 'Save Game', func(parentMenu, self) { } },
-            { text: 'Load Game', func(parentMenu, self) { } },
-        ]
-    })
-    Menu.setMenu('quick_actions', {
-        items: [
-            { text: 'Move Self', func(self) { } },
-            { text: 'Move Item', func(self) { } },
-            { text: 'Harvest', func(self) { } },
-            { text: 'Craft', func(self) { } },
-            { text: 'Change Mode', func(self) { } },
-            { text: 'Transfer Player', func(self) { Menu.open('transfer_player') } },
-        ]
-    })
-    Menu.setMenu('settings', {
-        items: [
-            { text: 'Increase Test Size', func(self) { } },
-            { text: 'Decrease Text Size', func(self) { } },
         ]
     })
     Menu.setMenu('set_self_program', {
@@ -399,7 +287,8 @@ import * as Menu from './utils/Menu.js'
                             text: handle.name,
                             info: path.join('/'),
                             async func() {
-                                botCommands.setProgram(handle, bots[hauntedBotId])
+                                bots[hauntedBotId].programCode = await readFile(handle)
+                                bots[hauntedBotId].programName = handle.name
                                 Menu.back()
                             }
                         })
@@ -564,9 +453,10 @@ import * as Menu from './utils/Menu.js'
         nextBotId++
     }
 
-    // for (let i = -50; i < 50; i++)
-    //     createBot(0, i)
     createBot(0, 0)
+    createBot(1, 0)
+    createBot(2, 0)
+    createBot(3, 0)
 
     const runBots = (() => {
 
@@ -582,6 +472,7 @@ import * as Menu from './utils/Menu.js'
         //the bot that should be running code
         let bot = undefined
 
+        //to make things more compact
         function cordsAtDir(x, y, dir) {
             if (dir == 'up') return { x, y: y - 1 }
             if (dir == 'right') return { x: x + 1, y }
@@ -589,16 +480,20 @@ import * as Menu from './utils/Menu.js'
             if (dir == 'left') return { x: x - 1, y }
         }
 
+        //a nice key lookup obj
         const messageFuncs = {
             set_self_mode(mode) {
                 if (botCommands.hasAction && botModes.includes(mode)) {
+                    let empty = true
                     bot.inventory.forEach(slot => {
                         if (slot.count > 0)
-                            return false
+                            empty = false
                     })
-                    bot.mode = mode
-                    botCommands.hasAction = false
-                    return true
+                    if (empty) {
+                        bot.mode = mode
+                        botCommands.hasAction = false
+                        return true
+                    }
                 }
                 return false
             },
@@ -653,7 +548,7 @@ import * as Menu from './utils/Menu.js'
                 return grid.get(cordsAtDir(bot.x, bot.y, dir).x, cordsAtDir(bot.x, bot.y, dir).y)
             },
             harvest(dir, slot) {
-                if (!hasAction || bot.mode != 'Harvester') return false
+                if (!botCommands.hasAction || bot.mode != 'Harvester') return false
                 const targetCords = cordsAtDir(bot.x, bot.y, dir)
                 const targetCell = grid.get(targetCords.x, targetCords.y)
                 if (targetCell.resource == undefined) return false
@@ -668,7 +563,7 @@ import * as Menu from './utils/Menu.js'
                     grid.set(targetCords.x, targetCords.y, { resource: targetCell.resource, count: targetCell.count - 1 })
                 else
                     grid.set(targetCords.x, targetCords.y, {})
-                hasAction = false
+                botCommands.hasAction = false
                 return true
             },
             move_items(fromSlotIndex, toSlotIndex, maxCount) {
@@ -687,7 +582,7 @@ import * as Menu from './utils/Menu.js'
                     stackSize - toSlot.count
                 )
                 if (fromSlot.count <= moveCount)
-                    bot.fromSlot = { type: '', count: 0 }
+                    bot.inventory[fromSlotIndex] = { type: '', count: 0 }
                 else
                     bot.inventory[fromSlotIndex].count -= moveCount
                 if (toSlot.count == 0)
@@ -695,7 +590,65 @@ import * as Menu from './utils/Menu.js'
                 else
                     bot.inventory[toSlotIndex].count += moveCount
                 return moveCount
-            }
+            },
+            take_items(dir, fromSlotIndex, toSlotIndex, maxCount) {
+                if (bot.mode != 'Transferer') return false
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetBotId = grid.get(targetCords.x, targetCords.y).botId
+                if (targetBotId == undefined) return false
+                const fromSlot = bots[targetBotId].inventory[fromSlotIndex]
+                const toSlot = bot.inventory[toSlotIndex]
+                if (
+                    fromSlot.count == 0 ||
+                    toSlot.count == stackSize ||
+                    (toSlot.count > 0 &&
+                        fromSlot.type != toSlot.type)
+                ) return false
+                let moveCount = Math.min(
+                    maxCount,
+                    stackSize,
+                    fromSlot.count,
+                    stackSize - toSlot.count
+                )
+                if (fromSlot.count <= moveCount)
+                    bots[targetBotId].inventory[fromSlotIndex] = { type: '', count: 0 }
+                else
+                    bots[targetBotId].inventory[fromSlotIndex].count -= moveCount
+                if (toSlot.count == 0)
+                    bot.inventory[toSlotIndex] = { count: moveCount, type: fromSlot.type }
+                else
+                    bot.inventory[toSlotIndex].count += moveCount
+                return moveCount
+            },
+            give_items(dir, fromSlotIndex, toSlotIndex, maxCount) {
+                if (bot.mode != 'Transferer') return false
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetBotId = grid.get(targetCords.x, targetCords.y).botId
+                if (targetBotId == undefined) return false
+                const fromSlot = bot.inventory[fromSlotIndex]
+                const toSlot = bots[targetBotId].inventory[toSlotIndex]
+                if (
+                    fromSlot.count == 0 ||
+                    toSlot.count == stackSize ||
+                    (toSlot.count > 0 &&
+                        fromSlot.type != toSlot.type)
+                ) return false
+                let moveCount = Math.min(
+                    maxCount,
+                    stackSize,
+                    fromSlot.count,
+                    stackSize - toSlot.count
+                )
+                if (fromSlot.count <= moveCount)
+                    bot.inventory[fromSlotIndex] = { type: '', count: 0 }
+                else
+                    bot.inventory[fromSlotIndex].count -= moveCount
+                if (toSlot.count == 0)
+                    bots[targetBotId].inventory[toSlotIndex] = { count: moveCount, type: fromSlot.type }
+                else
+                    bots[targetBotId].inventory[toSlotIndex].count += moveCount
+                return moveCount
+            },
         }
 
         //handle all the messages

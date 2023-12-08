@@ -3,16 +3,14 @@ const Bot = (() => {
     let lastMessage = ''
     let resolve = () => { }
     self.onmessage = (m) => {
-        if (m.data.type != 'keyPass')
-            console.log('Worker received: ', m.data)
-        lastMessage = m.data
-        resolve()
+        if (m.data.type != 'keyPass') {
+            lastMessage = m.data
+            resolve()
+        }
     }
     async function runCommand(command) {
-        console.log('Worker sent:', command)
         self.postMessage(command)
         await new Promise(r => resolve = r)
-        console.log('Returning:', lastMessage)
         return lastMessage
     }
 
