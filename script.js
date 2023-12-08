@@ -472,6 +472,8 @@ import * as Menu from './utils/Menu.js'
         //the bot that should be running code
         let bot = undefined
 
+        let hasAction
+
         //to make things more compact
         function cordsAtDir(x, y, dir) {
             if (dir == 'up') return { x, y: y - 1 }
@@ -483,7 +485,7 @@ import * as Menu from './utils/Menu.js'
         //a nice key lookup obj
         const messageFuncs = {
             set_self_mode(mode) {
-                if (botCommands.hasAction && botModes.includes(mode)) {
+                if (hasAction && botModes.includes(mode)) {
                     let empty = true
                     bot.inventory.forEach(slot => {
                         if (slot.count > 0)
@@ -491,7 +493,7 @@ import * as Menu from './utils/Menu.js'
                     })
                     if (empty) {
                         bot.mode = mode
-                        botCommands.hasAction = false
+                        hasAction = false
                         return true
                     }
                 }
@@ -501,33 +503,33 @@ import * as Menu from './utils/Menu.js'
                 if (bot.mode != 'Mobile') return false
                 const x = bot.x
                 const y = bot.y
-                if (botCommands.hasAction && bot.mode == 'Mobile') {
+                if (hasAction && bot.mode == 'Mobile') {
                     if (dir == 'up' && Object.keys(grid.get(x, y - 1)).length == 0) {
                         bot.y--
                         grid.set(x, y, {})
                         grid.set(x, y - 1, { botId: bot.id })
-                        botCommands.hasAction = false
+                        hasAction = false
                         return true
                     }
                     if (dir == 'right' && Object.keys(grid.get(x + 1, y)).length == 0) {
                         bot.x++
                         grid.set(x, y, {})
                         grid.set(x + 1, y, { botId: bot.id })
-                        botCommands.hasAction = false
+                        hasAction = false
                         return true
                     }
                     if (dir == 'down' && Object.keys(grid.get(x, y + 1)).length == 0) {
                         bot.y++
                         grid.set(x, y, {})
                         grid.set(x, y + 1, { botId: bot.id })
-                        botCommands.hasAction = false
+                        hasAction = false
                         return true
                     }
                     if (dir == 'left' && Object.keys(grid.get(x - 1, y)).length == 0) {
                         bot.x--
                         grid.set(x, y, {})
                         grid.set(x - 1, y, { botId: bot.id })
-                        botCommands.hasAction = false
+                        hasAction = false
                         return true
                     }
                 }
@@ -548,7 +550,7 @@ import * as Menu from './utils/Menu.js'
                 return grid.get(cordsAtDir(bot.x, bot.y, dir).x, cordsAtDir(bot.x, bot.y, dir).y)
             },
             harvest(dir, slot) {
-                if (!botCommands.hasAction || bot.mode != 'Harvester') return false
+                if (!hasAction || bot.mode != 'Harvester') return false
                 const targetCords = cordsAtDir(bot.x, bot.y, dir)
                 const targetCell = grid.get(targetCords.x, targetCords.y)
                 if (targetCell.resource == undefined) return false
@@ -563,7 +565,7 @@ import * as Menu from './utils/Menu.js'
                     grid.set(targetCords.x, targetCords.y, { resource: targetCell.resource, count: targetCell.count - 1 })
                 else
                     grid.set(targetCords.x, targetCords.y, {})
-                botCommands.hasAction = false
+                hasAction = false
                 return true
             },
             move_items(fromSlotIndex, toSlotIndex, maxCount) {
@@ -671,7 +673,7 @@ import * as Menu from './utils/Menu.js'
             for (let index = 0; index < botIds.length; index++) {
                 const botId = botIds[index]
                 bot = bots[botId]
-                botCommands.hasAction = true
+                hasAction = true
                 doneCode = Math.floor(Math.random() * bigTen)
                 worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
                 await new Promise(async (resolve) => resolvePromise = resolve)
