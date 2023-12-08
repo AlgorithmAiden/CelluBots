@@ -42,7 +42,6 @@ import * as Menu from './utils/Menu.js'
         await writable.close()
     }
 
-
     async function readFile(handle) {
         return await (await handle.getFile()).text()
     }
@@ -96,7 +95,8 @@ import * as Menu from './utils/Menu.js'
         document.getElementById('getFolderButton').remove()
     })()
 
-    function simpleHash(str, maxLength) {
+    //hashes to base 36
+    function simpleHash(str) {
         let hash = 0
         for (let i = 0; i < str.length; i++) {
             hash = ((hash << 5) - hash) + str.charCodeAt(i)
@@ -104,6 +104,88 @@ import * as Menu from './utils/Menu.js'
         }
         return Math.abs(hash).toString(32)
     }
+
+    const botCommands = {
+        hasAction: false,
+        moveBot(dir, bot) {
+            const x = bot.x
+            const y = bot.y
+            if (botCommands.hasAction && bot.mode == 'Mobile') {
+                if (dir == 'up' && Object.keys(grid.get(x, y - 1)).length == 0) {
+                    bot.y--
+                    grid.set(x, y, {})
+                    grid.set(x, y - 1, { botId: bot.id })
+                    botCommands.hasAction = false
+                    return true
+                }
+                if (dir == 'right' && Object.keys(grid.get(x + 1, y)).length == 0) {
+                    bot.x++
+                    grid.set(x, y, {})
+                    grid.set(x + 1, y, { botId: bot.id })
+                    botCommands.hasAction = false
+                    return true
+                }
+                if (dir == 'down' && Object.keys(grid.get(x, y + 1)).length == 0) {
+                    bot.y++
+                    grid.set(x, y, {})
+                    grid.set(x, y + 1, { botId: bot.id })
+                    botCommands.hasAction = false
+                    return true
+                }
+                if (dir == 'left' && Object.keys(grid.get(x - 1, y)).length == 0) {
+                    bot.x--
+                    grid.set(x, y, {})
+                    grid.set(x - 1, y, { botId: bot.id })
+                    botCommands.hasAction = false
+                    return true
+                }
+            }
+            return false
+        },
+        changeMode(mode, bot) {
+            if (botCommands.hasAction && botModes.includes(mode)) {
+                bot.inventory.forEach(slot => {
+                    if (slot.count > 0)
+                        return false
+                })
+                bot.mode = mode
+                botCommands.hasAction = false
+                return true
+            }
+            return false
+        },
+        harvest(dir, slotIndex, bot) {
+            const x = bot.x
+            const y = bot.y
+            if (botCommands.hasAction && bot.mode == 'Harvester') {
+                let targetX = x
+                let targetY = y
+                if (dir == 'up') targetY--
+                else if (dir == 'right') targetX++
+                else if (dir == 'down') targetY++
+                else if (dir == 'left') targetX--
+                const targetCell = grid.get(targetX, targetY)
+                const slot = bot.inventory[slotIndex]
+                if (targetCell.count > 0 && (slot.count == 0) || (slot.count < stackSize && slot.type == targetCell.resource)) {
+                    bot.inventory[slotIndex].count++
+                    bot.inventory[slotIndex].type = targetCell.resource
+                    if (targetCell.count > 1)
+                        grid.set(targetX, targetY, { resource: targetCell.resource, count: targetCell.count - 1 })
+                    else
+                        grid.set(targetX, targetY, {})
+                    return true
+                } else return false
+            }
+            return false
+        },
+        async setProgram(handle, bot) {
+            bot.programCode = await readFile(handle)
+            bot.programName = handle.name.split('.')[0]
+        }
+    }
+
+    //all the programs will be stored here
+    let programs = {}
 
     //this is the seed controlling all world generation
     const firstSeed = Math.random() * 100
@@ -259,12 +341,13 @@ import * as Menu from './utils/Menu.js'
     const viewPort = {
         x: 0,
         y: 0,
-        scale: 100
+        scale: 10
     }
 
     //this is the bot the player controls / the viewfinder is tied to
     let hauntedBotId = 50
 
+    //the color for empty spaces
     const backgroundColor = '#333'
 
     Menu.setCtx(ctx)
@@ -302,13 +385,27 @@ import * as Menu from './utils/Menu.js'
         title: 'Choose new program',
         async onCreate(self) {
             self.items = []
-            const scan = await scanFolder(playerFolderHandle)
-            scan.forEach(handle => {
-                self.items.push({
-                    text: handle.name,
-                    func(parentMenu, self) { }
+            let dirs = []
+            dirs.push(await scanFolder(playerFolderHandle))
+            for (let index = 0; index < dirs.length; index++) {
+                const dir = dirs[index]
+                const scan = await scanFolder(dir)
+                scan.forEach(async (handle) => {
+                    if (handle.kind == 'directory')
+                        dirs.push(handle)
+                    else {
+                        const path = await folderHandle.resolve(handle)
+                        self.items.push({
+                            text: handle.name,
+                            info: path.join('/'),
+                            async func() {
+                                botCommands.setProgram(handle, bots[hauntedBotId])
+                                Menu.back()
+                            }
+                        })
+                    }
                 })
-            })
+            }
         }
     })
     Menu.setMenu('transfer_player', {
@@ -358,7 +455,7 @@ import * as Menu from './utils/Menu.js'
             { text: 'x', func(parentMenu, self) { self.info = String(bots[hauntedBotId].x) } },
             { text: 'y', func(parentMenu, self) { self.info = String(bots[hauntedBotId].y) } },
             { text: 'mode', func(parentMenu, self) { self.info = bots[hauntedBotId].mode } },
-            { text: 'source', func(parentMenu, self) { self.info = bots[hauntedBotId].source } },
+            { text: 'program', func(parentMenu, self) { self.info = bots[hauntedBotId].programName; console.log(bots[hauntedBotId]) } },
             {
                 text: 'slot 0', func(parentMenu, self) {
                     const slot = bots[hauntedBotId].inventory[0]
@@ -430,7 +527,6 @@ import * as Menu from './utils/Menu.js'
     Menu.setMaxHeight(canvas.height * .2)
     Menu.setFont('Silkscreen')
     Menu.setCenterTitle(true)
-    Menu.open('home')
 
     const stackSize = 100
 
@@ -460,13 +556,16 @@ import * as Menu from './utils/Menu.js'
         bots[nextBotId] = {
             mem: {},
             mode,
-            source: '',
+            programName: 'No program set',
+            programCode: '',
             inventory: new Array(9).fill(0).map(slot => ({ type: '', count: 0 })),
             x,
             y,
             id: nextBotId
         }
-        grid.set(x, y, { botId: nextBotId })
+        grid.set(x, y, {
+            botId: nextBotId
+        })
         nextBotId++
     }
 
@@ -474,112 +573,45 @@ import * as Menu from './utils/Menu.js'
         createBot(0, i)
 
     const runBots = (() => {
-        let hasAction
-        function moveBot(dir, bot) {
-            const x = bot.x
-            const y = bot.y
-            if (hasAction && bot.mode == 'Mobile') {
-                if (dir == 'up' && Object.keys(grid.get(x, y - 1)).length == 0) {
-                    bot.y--
-                    grid.set(x, y, {})
-                    grid.set(x, y - 1, { botId: bot.id })
-                    hasAction = false
-                    return true
+
+        //all bot code will be executed in the worker for speed
+        const worker = new Worker('./botRunner.js')
+
+        //it will need to be accessible out here
+        let resolvePromise = () => { }
+
+        let doneCode = ''
+
+        let currentBot = undefined
+
+        worker.onmessage = async (m) => {
+            if (currentBot != undefined) {
+                const message = m.data
+                const command = message[0]
+                if (command == doneCode)
+                    resolvePromise()
+                else if (command == 'moveBot') {
                 }
-                if (dir == 'right' && Object.keys(grid.get(x + 1, y)).length == 0) {
-                    bot.x++
-                    grid.set(x, y, {})
-                    grid.set(x + 1, y, { botId: bot.id })
-                    hasAction = false
-                    return true
-                }
-                if (dir == 'down' && Object.keys(grid.get(x, y + 1)).length == 0) {
-                    bot.y++
-                    grid.set(x, y, {})
-                    grid.set(x, y + 1, { botId: bot.id })
-                    hasAction = false
-                    return true
-                }
-                if (dir == 'left' && Object.keys(grid.get(x - 1, y)).length == 0) {
-                    bot.x--
-                    grid.set(x, y, {})
-                    grid.set(x - 1, y, { botId: bot.id })
-                    hasAction = false
-                    return true
-                }
+                else if (command == 'changeMode') {
+                    botCommands.changeMode(message[1], currentBot)
+                } else
+                    console.log(message)
             }
-            return false
         }
-        function changeMode(mode, bot) {
-            if (hasAction && botModes.includes(mode)) {
-                bot.inventory.forEach(slot => {
-                    if (slot.count > 0)
-                        return false
-                })
-                bot.mode = mode
-                hasAction = false
-                return true
+
+        const bigTen = Math.pow(10, 10)
+        return async () => {
+            let i = 0
+            const botIds = Object.keys(bots)
+            for (let index = 0; index < botIds.length; index++) {
+                const botId = botIds[index]
+                currentBot = bots[botId]
+                botCommands.hasAction = true
+                doneCode = Math.floor(Math.random() * bigTen)
+                worker.postMessage({ key: doneCode, code: currentBot.programCode })
+                await new Promise(async (resolve) => resolvePromise = resolve)
             }
-            return false
-        }
-        function harvest(dir, slotIndex, bot) {
-            const x = bot.x
-            const y = bot.y
-            if (hasAction && bot.mode == 'Harvester') {
-                let targetX = x
-                let targetY = y
-                if (dir == 'up') targetY--
-                else if (dir == 'right') targetX++
-                else if (dir == 'down') targetY++
-                else if (dir == 'left') targetX--
-                const targetCell = grid.get(targetX, targetY)
-                const slot = bot.inventory[slotIndex]
-                if (targetCell.count > 0 && (slot.count == 0) || (slot.count < stackSize && slot.type == targetCell.resource)) {
-                    bot.inventory[slotIndex].count++
-                    bot.inventory[slotIndex].type = targetCell.resource
-                    if (targetCell.count > 1)
-                        grid.set(targetX, targetY, { resource: targetCell.resource, count: targetCell.count - 1 })
-                    else
-                        grid.set(targetX, targetY, {})
-                    return true
-                } else return false
-            }
-            return false
-        }
-        return () => {
-            Object.keys(bots).forEach(botId => {
-
-                const bot = bots[botId]
-                const x = bot.x
-                const y = bot.y
-                hasAction = true
-
-                if (!['Mobile', 'Harvester'].includes(bot.mode)) {
-                    if (random() < .01)
-                        changeMode('Harvester', bot)
-                } else if (random() < .01)
-                    changeMode(['Builder', 'Crafter', 'Destroyer'][Math.floor(random() * 3)], bot)
-
-                else if (bot.inventory[0].count == stackSize && bot.x > 0)
-                    if (bot.mode != 'Mobile')
-                        changeMode('Mobile', bot)
-                    else
-                        moveBot('left', bot)
-                else if (bot.inventory[0].count > 0 && bot.x == 0)
-                    bot.inventory[0] = { type: '', count: 0 }
-
-                else if (grid.get(x + 1, y).count > 0)
-                    if (bot.mode != 'Harvester')
-                        changeMode('Harvester', bot)
-                    else
-                        harvest('right', 0, bot)
-                else
-                    if (bot.mode != 'Mobile')
-                        changeMode('Mobile', bot)
-                    else
-                        moveBot('right', bot)
-
-            })
+            currentBot = undefined
         }
     })()
 
@@ -669,7 +701,14 @@ import * as Menu from './utils/Menu.js'
     let autoTick = false
     let oneTick = false
 
-    setInterval(() => {
+    let currentKeys = []
+    document.addEventListener('keyup', event => {
+        while (currentKeys.includes(event.key))
+            currentKeys.splice(currentKeys.indexOf(event.key), 1)
+    })
+    document.addEventListener('keydown', event => currentKeys.push(event.key))
+
+    while (true) {
         if (Menu.getStack().length == 0) {
             if (currentKeys.includes('e'))
                 viewPort.scale = Math.max(viewPort.scale * .99, -Infinity)
@@ -678,27 +717,20 @@ import * as Menu from './utils/Menu.js'
         }
 
         if (autoTick || oneTick) {
-            runBots()
             oneTick = false
-            console.log('Tick')
+            await runBots()
         }
 
         viewPort.x = bots[hauntedBotId].x
         viewPort.y = bots[hauntedBotId].y
 
-        ctx.fillStyle = '#000'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
         renderGrid()
         Menu.render(Math.min(canvas.width, canvas.height) / 25, canvas.height * .2)
 
-    }, 0)
+        await new Promise(r => setTimeout(r, 0))
 
-    let currentKeys = []
-    document.addEventListener('keyup', event => {
-        while (currentKeys.includes(event.key))
-            currentKeys.splice(currentKeys.indexOf(event.key), 1)
-    })
-    document.addEventListener('keydown', event => currentKeys.push(event.key))
+    }
+
 
     /*
     
@@ -782,7 +814,8 @@ import * as Menu from './utils/Menu.js'
             [10, 'gear']
         ],
         mode: 'Harvester',
-        source: 'F217js=12sa=ca'
+        programCode: 'console.log('Hello World!')'
+        programName: 'Hello World.js'
     }
     
     Bot Program Usage:
@@ -805,13 +838,4 @@ import * as Menu from './utils/Menu.js'
     ~ make the browser remember file permissions
 
      */
-
-    // const worker = new Worker('./botRunner.js')
-    // worker.postMessage(JSON.stringify({
-    //     1: 'console.log(\'Thing 1\')a'
-    // }))
-    // worker.onmessage = (e) => {
-    //     console.log((e.data))
-    //     worker.postMessage(e.data + 1)
-    // }
 })()

@@ -1,2 +1,2 @@
 # CelluBots
-Still heavily in progress, not usefull for anyone except me
+Still heavily in progress, not useful for anyone except me

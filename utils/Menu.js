@@ -37,23 +37,27 @@ export function back() {
  */
 export async function open(name) {
 
-    //add the new menu to the stack
-    stack.push(name)
+    //check if it is a valid menu
+    if (Object.keys(menus).includes(name)) {
 
-    //grab the new menu
-    const newMenu = menus[name]
+        //add the new menu to the stack
+        stack.push(name)
 
-    //run the onCreate export function, if applicable
-    if (newMenu.onCreate)
-        try {
-            await newMenu.onCreate(newMenu)
-        } catch (err) {
-            console.error(err)
-        }
+        //grab the new menu
+        const newMenu = menus[name]
 
-    //reset input / selected
-    input = ''
-    selected = ''
+        //run the onCreate export function, if applicable
+        if (newMenu.onCreate)
+            try {
+                await newMenu.onCreate(newMenu)
+            } catch (err) {
+                console.error(err)
+            }
+
+        //reset input / selected
+        input = ''
+        selected = ''
+    }
 }
 /**
  * For use with auto key inputs
@@ -147,24 +151,30 @@ export async function handleKey(key, mode, event) {
     //on enter run the export function for input, or if there is no input run the export function for selected
     else if (mode == 'up' && key == 'Enter') {
 
-        //hold the menu
-        const currentMenu = menus[stack[stack.length - 1]]
+        //don't run if there is no open menu
+        if (stack.length > 0) {
 
-        //check for input
-        if (input.length > 0) {
+            //hold the menu
+            const currentMenu = menus[stack[stack.length - 1]]
 
-            //find and run the export function for input
-            currentMenu.items.forEach(item => {
-                if (item.text.toLocaleLowerCase() == input.toLocaleLowerCase())
-                    item.func(currentMenu, item)
-            })
+            //check for input
+            if (input.length > 0) {
+
+                //find and run the export function for input
+                currentMenu.items.forEach(item => {
+                    if (item.text.toLocaleLowerCase() == input.toLocaleLowerCase())
+                        item.func(currentMenu, item)
+                })
+            } else {
+
+                //find and run the export function for selected
+                currentMenu.items.forEach(item => {
+                    if (item.text == selected)
+                        item.func(currentMenu, item)
+                })
+            }
         } else {
-
-            //find and run the export function for selected
-            currentMenu.items.forEach(item => {
-                if (item.text == selected)
-                    item.func(currentMenu, item)
-            })
+            await open(defaultMenu)
         }
     }
 
