@@ -210,6 +210,7 @@ import * as Menu from './utils/Menu.js'
     function resize() {
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
+        Menu.setMaxHeight(canvas.height * .2)
     }
     window.onresize = resize
     resize()
@@ -262,11 +263,11 @@ import * as Menu from './utils/Menu.js'
     Menu.setMenu('home', {
         title: 'This is the home menu',
         items: [
-            { text: 'Transfer Player', func() { Menu.open('transfer_player') } },
-            { text: 'Toggle Auto Tick', info: 'Currently is off', func(parentMenu, self) { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
-            { text: 'Tick', func(parentMenu, self) { oneTick = true } },
+            { text: 'Quick Actions', func() { Menu.open('quick_actions') } },
+            { text: 'Toggle Auto Tick', info: 'Currently is off', func() { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
+            { text: 'Tick', func() { oneTick = true } },
             { text: 'Read Self Info', func() { Menu.open('self_info') } },
-            { text: 'Set Self Program', async func(parentMenu, self) { await Menu.open('set_self_program') } },
+            { text: 'Set Self Program', async func() { await Menu.open('set_self_program') } },
         ]
     })
     Menu.setMenu('set_self_program', {
@@ -297,49 +298,13 @@ import * as Menu from './utils/Menu.js'
             }
         }
     })
-    Menu.setMenu('transfer_player', {
-        title: 'Transfer direction?',
-        items: [
-            {
-                text: 'Up', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x, currentBot.y - 1).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-            {
-                text: 'Right', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x + 1, currentBot.y).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-            {
-                text: 'Down', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x, currentBot.y + 1).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-            {
-                text: 'Left', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x - 1, currentBot.y).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-        ]
-    })
     Menu.setMenu('self_info', {
         title: 'Last updated on open',
         items: [
             { text: 'x', func(parentMenu, self) { self.info = String(bots[hauntedBotId].x) } },
             { text: 'y', func(parentMenu, self) { self.info = String(bots[hauntedBotId].y) } },
             { text: 'mode', func(parentMenu, self) { self.info = bots[hauntedBotId].mode } },
+            { text: 'program', func(parentMenu, self) { self.info = bots[hauntedBotId].programName } },
             {
                 text: 'slot 0', func(parentMenu, self) {
                     const slot = bots[hauntedBotId].inventory[0]
@@ -408,7 +373,102 @@ import * as Menu from './utils/Menu.js'
             self.items.forEach(item => item.func(self, item))
         }
     })
-    Menu.setMaxHeight(canvas.height * .2)
+    Menu.setMenu('quick_actions', {
+        title: 'Items with * cost one tick',
+        items: [
+            { text: 'Move Self', func() { Menu.open('quick_actions/move_self') }, info: '*' },
+            { text: 'Set Self Mode', func() { Menu.open('quick_actions/set_self_mode') }, info: '*' },
+            { text: 'Harvest', func() { Menu.open('quick_actions/harvest') }, info: '*' },
+            { text: 'Take Items', func() { Menu.open('quick_actions/take_items') }, info: '*' },
+            { text: 'Give Items', func() { Menu.open('quick_actions/give_items') }, info: '*' },
+            { text: 'Transfer Player Control', func() { Menu.open('quick_actions/transfer_player_control') } },
+        ]
+    })
+    Menu.setMenu('quick_actions/move_self', {
+        title: 'Choose move direction',
+        items: [
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.moveSelf('up')`; bots[hauntedBotId].programName = 'Move Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.moveSelf('right')`; bots[hauntedBotId].programName = 'Move Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.moveSelf('down')`; bots[hauntedBotId].programName = 'Move Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.moveSelf('left')`; bots[hauntedBotId].programName = 'Move Left'; oneTick = true } },
+        ]
+    })
+    Menu.setMenu('quick_actions/set_self_mode', {
+        title: 'Choose new mode',
+        items: [
+            { text: 'Harvester', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Harvester')`; bots[hauntedBotId].programName = 'Harvester'; oneTick = true } },
+            { text: 'Mobile', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Mobile')`; bots[hauntedBotId].programName = 'Mobile'; oneTick = true } },
+            { text: 'Crafter', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Crafter')`; bots[hauntedBotId].programName = 'Crafter'; oneTick = true } },
+            { text: 'Builder', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Builder')`; bots[hauntedBotId].programName = 'Builder'; oneTick = true } },
+            { text: 'Destroyer', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Destroyer')`; bots[hauntedBotId].programName = 'Destroyer'; oneTick = true } },
+            { text: 'Transferer', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Transferer')`; bots[hauntedBotId].programName = 'Transferer'; oneTick = true } },
+        ]
+    })
+    Menu.setMenu('quick_actions/harvest', {
+        title: 'Choose harvest direction',
+        items: [
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.harvest('up',0)`; bots[hauntedBotId].programName = 'Harvest Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.harvest('right',0)`; bots[hauntedBotId].programName = 'Harvest Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.harvest('down',0)`; bots[hauntedBotId].programName = 'Harvest Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.harvest('left',0)`; bots[hauntedBotId].programName = 'Harvest Left'; oneTick = true } },
+        ]
+    })
+    Menu.setMenu('quick_actions/take_items', {
+        title: 'Choose direction to take item from',
+        items: [
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.takeItem('up',0,0)`; bots[hauntedBotId].programName = 'Take Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.takeItem('right',0,0)`; bots[hauntedBotId].programName = 'Take Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.takeItem('down',0,0)`; bots[hauntedBotId].programName = 'Take Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.takeItem('left',0,0)`; bots[hauntedBotId].programName = 'Take Left'; oneTick = true } },
+        ]
+    })
+    Menu.setMenu('quick_actions/give_items', {
+        title: 'Choose direction to take item from',
+        items: [
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.giveItem('up',0,0)`; bots[hauntedBotId].programName = 'Give Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.giveItem('right',0,0)`; bots[hauntedBotId].programName = 'Give Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.giveItem('down',0,0)`; bots[hauntedBotId].programName = 'Give Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.giveItem('left',0,0)`; bots[hauntedBotId].programName = 'Give Left'; oneTick = true } },
+        ]
+    })
+    Menu.setMenu('quick_actions/transfer_player_control', {
+        title: 'Choose direction to move player control',
+        items: [
+            {
+                text: 'Up', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x, currentBot.y - 1).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                }
+            },
+            {
+                text: 'Right', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x + 1, currentBot.y).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                }
+            },
+            {
+                text: 'Down', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x, currentBot.y + 1).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                }
+            },
+            {
+                text: 'Left', func() {
+                    const currentBot = bots[hauntedBotId]
+                    let newId = grid.get(currentBot.x - 1, currentBot.y).botId
+                    if (newId != undefined)
+                        hauntedBotId = newId
+                }
+            },
+        ]
+    })
+
     Menu.setFont('Silkscreen')
     Menu.setCenterTitle(true)
 
@@ -472,6 +532,7 @@ import * as Menu from './utils/Menu.js'
         //the bot that should be running code
         let bot = undefined
 
+        //it needs to be out here
         let hasAction
 
         //to make things more compact
@@ -537,11 +598,15 @@ import * as Menu from './utils/Menu.js'
             },
             set_self_mem(mem) {
                 bot.mem = mem
+                return true
             },
             set_other_mem(dir, mem) {
                 const targetCords = cordsAtDir(bot.x, bot.y, dir)
-                if (grid.get(targetCords.x, targetCords.y).botId != undefined)
+                if (grid.get(targetCords.x, targetCords.y).botId != undefined) {
                     bots[grid.get(targetCords.x, targetCords.y).botId].mem = mem
+                    return true
+                }
+                return false
             },
             get_self_info() {
                 return bot
@@ -576,7 +641,7 @@ import * as Menu from './utils/Menu.js'
                     toSlot.count == stackSize ||
                     (toSlot.count > 0 &&
                         fromSlot.type != toSlot.type)
-                ) return false
+                ) return 0
                 let moveCount = Math.min(
                     maxCount,
                     stackSize,
@@ -597,7 +662,7 @@ import * as Menu from './utils/Menu.js'
                 if (bot.mode != 'Transferer') return false
                 const targetCords = cordsAtDir(bot.x, bot.y, dir)
                 const targetBotId = grid.get(targetCords.x, targetCords.y).botId
-                if (targetBotId == undefined) return false
+                if (targetBotId == undefined) return 0
                 const fromSlot = bots[targetBotId].inventory[fromSlotIndex]
                 const toSlot = bot.inventory[toSlotIndex]
                 if (
@@ -605,7 +670,7 @@ import * as Menu from './utils/Menu.js'
                     toSlot.count == stackSize ||
                     (toSlot.count > 0 &&
                         fromSlot.type != toSlot.type)
-                ) return false
+                ) return 0
                 let moveCount = Math.min(
                     maxCount,
                     stackSize,
@@ -626,7 +691,7 @@ import * as Menu from './utils/Menu.js'
                 if (bot.mode != 'Transferer') return false
                 const targetCords = cordsAtDir(bot.x, bot.y, dir)
                 const targetBotId = grid.get(targetCords.x, targetCords.y).botId
-                if (targetBotId == undefined) return false
+                if (targetBotId == undefined) return 0
                 const fromSlot = bot.inventory[fromSlotIndex]
                 const toSlot = bots[targetBotId].inventory[toSlotIndex]
                 if (
@@ -634,7 +699,7 @@ import * as Menu from './utils/Menu.js'
                     toSlot.count == stackSize ||
                     (toSlot.count > 0 &&
                         fromSlot.type != toSlot.type)
-                ) return false
+                ) return 0
                 let moveCount = Math.min(
                     maxCount,
                     stackSize,
@@ -651,6 +716,18 @@ import * as Menu from './utils/Menu.js'
                     bots[targetBotId].inventory[toSlotIndex].count += moveCount
                 return moveCount
             },
+            move_player_control(dir) {
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const newId = grid.get(targetCords.x, targetCords.y)
+                if (newId != undefined) {
+                    hauntedBotId = newId
+                    return true
+                }
+                return false
+            },
+            is_under_player_control() {
+                return bot.id == hauntedBotId
+            }
         }
 
         //handle all the messages
@@ -662,7 +739,7 @@ import * as Menu from './utils/Menu.js'
                 if (command == doneCode)
                     resolvePromise()
                 else if (messageFuncs[command] != undefined)
-                    worker.postMessage(await messageFuncs[command](...args))
+                    worker.postMessage((await messageFuncs[command](...args)))
             }
         }
 
@@ -784,6 +861,7 @@ import * as Menu from './utils/Menu.js'
         }
 
         if (autoTick || oneTick) {
+            console.log('tick')
             oneTick = false
             await runBots()
         }
