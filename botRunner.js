@@ -57,18 +57,17 @@ self.addEventListener('message', (m) => {
     if (message.type == 'keyPass') {
         (new Function(
             `
-            ${BotCode}
-            try {
-                (async () => {
-                    await (async()=>{${message.code}})()
-                })().then(() => {
+            ${BotCode};
+                (async ()=>{
+                    try {
+                    await (async()=>{${message.code}})().then(() => {
+                        self.postMessage([${message.key}])
+                    })
+                } catch(err) {
+                    console.error('Error running code:', err)
                     self.postMessage([${message.key}])
-                })
-            }
-            catch (err) {
-                console.err('Error running code:', err)
-                self.postMessage([${message.key}])
-            }
+                }
+                })()
             `
         ))()
     }
