@@ -66,7 +66,6 @@ export async function open(name) {
  * @param {object} event 
  */
 export async function handleKey(key, mode, event) {
-    console.log(key, mode)
 
     //prevent bugs caused by no menus
     if (menus.length == 0) return

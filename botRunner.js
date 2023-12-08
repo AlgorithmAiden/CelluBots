@@ -1,4 +1,4 @@
-// const BotCode = `
+const BotCode = `
 const Bot = (() => {
     let lastMessage = ''
     let resolve = () => { }
@@ -51,7 +51,7 @@ const Bot = (() => {
 
     }
 })()
-// `
+`
 self.addEventListener('message', (m) => {
     const message = m.data
     if (message.type == 'keyPass') {
