@@ -212,7 +212,7 @@ import Console from './utils/Console.js'
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
         Menu.setMaxHeight(canvas.height * .2)
-        Menu.setTextSize(Math.floor(canvas.width, canvas.height) / 30)
+        Menu.setTextSize(Math.floor(canvas.width, canvas.height) / 40)
         Console.maxHeight = canvas.height * .2
         Console.defaultTextSize = Math.floor(canvas.width, canvas.height) / 40
     }
@@ -496,7 +496,7 @@ import Console from './utils/Console.js'
     botModes.forEach((mode, index) => {
         const color = Colors.createColor()
         color.saturation = 100
-        color.lightness = 25
+        color.lightness = 50
         color.hue = Math.round(100 / (botModes.length - 1) * index)
         botModeColors[mode] = color.hex
     })

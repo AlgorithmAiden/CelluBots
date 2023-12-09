@@ -14,4 +14,5 @@ if (self.mode == 'Mobile') {
 } else {
     await Bot.setSelfMode('Mobile')
 }
-Bot.log(self.mode)
+if (Math.random() < .01)
+    Bot.log(Math.random())
