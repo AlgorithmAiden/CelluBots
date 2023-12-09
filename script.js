@@ -743,7 +743,7 @@ import Console from './utils/Console.js'
                 return bot.id == hauntedBotId
             },
             log(text, color) {
-                Console.log({ text: `[Bot${bot.id}] ${text}`, color })
+                Console.log({ text: `[Bot ${bot.id}] ${text}`, color })
                 return true
             }
         }
