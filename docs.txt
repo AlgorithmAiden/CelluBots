@@ -48,6 +48,10 @@ setSelfMode(mode):
 ~ if mode is a valid mode, sets CM to mode
 ~ returns true if mode is a valid mode
 
+setOtherMode(dir, mode) * [Builder] :
+~ sets the mode to the bot at dir to mode, if there is a bot at dir
+~ returns true if there is a bot at dir
+
 moveSelf(dir) * [Mobile] :
 ~ if the space is empty at dir, it will move CB 1 space
 ~ returns true if the move succeeds

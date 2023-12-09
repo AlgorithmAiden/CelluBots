@@ -18,6 +18,9 @@ const Bot = (() => {
         async setSelfMode(mode) {
             return await runCommand(['set_self_mode', mode])
         },
+        async setOtherMode(dir, mode) {
+            return await runCommand(['set_other_mode', dir, mode])
+        },
         async moveSelf(dir) {
             return await runCommand(['move_self', dir])
         },

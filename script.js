@@ -576,6 +576,16 @@ import Console from './utils/Console.js'
                 }
                 return false
             },
+            set_other_mode(dir, mode) {
+                if (!bot.mode == 'Builder') return false
+                if (!hasAction) return false
+                if (!botModes.includes(mode)) return false
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetBotId = grid.get(targetCords.x, targetCords.y).botId
+                if (targetBotId == undefined) return false
+                bots[targetBotId].mode = mode
+                return true
+            },
             move_self(dir) {
                 if (bot.mode != 'Mobile') return false
                 const x = bot.x
