@@ -558,8 +558,8 @@ import Console from './utils/Console.js'
     createBot(1, 0)
     createBot(1, 1, energyCapacity)
 
-    bots[0].mode='Transferer'
-    bots[0].inventory[0]={type:'coal',count:10}
+    // bots[0].mode='Transferer'
+    // bots[0].inventory[0]={type:'coal',count:10}
 
     //runs the code for every bot
     const runBots = (() => {
