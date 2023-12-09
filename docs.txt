@@ -33,6 +33,8 @@ Each bot has several values, below is an example bot:
     ]
 }
 
+Bots are run in the order they are created, or from smallest id to largest
+
 The commands are as follows:
 (CB: Current Bot (the bot running the code))
 (CM: Current Mode (the mode of the bot running the code))
@@ -81,3 +83,6 @@ movePlayerControl(dir):
 
 isUnderPlayerControl:
 ~ returns true is CB is is under player control
+
+log(text, color):
+~ logs the text to the Console (not to be confused with the console)

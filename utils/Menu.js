@@ -30,7 +30,6 @@ export function back() {
     input = ''
     selected = ''
 }
-
 /**
  * Open a menu
  * @param {string} name 
@@ -212,29 +211,32 @@ export function render() {
         //hold the menu
         const currentMenu = menus[stack[stack.length - 1]]
 
-        //use gradients to keep the text in the box
-        let regularGrad, correctGrad, invalidGrad
-
         let topY = 0
         if (input.length > 0) topY += textSize
         if (currentMenu.title) topY += textSize
 
         //offset the lines if there is any chars typed
-        regularGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        let regularGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
         regularGrad.addColorStop(0, '#0000')
         regularGrad.addColorStop(.001, normalColor)
         regularGrad.addColorStop(.999, normalColor)
         regularGrad.addColorStop(1, '#0000')
-        correctGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        let correctGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
         correctGrad.addColorStop(0, '#0000')
         correctGrad.addColorStop(.001, correctColor)
         correctGrad.addColorStop(.999, correctColor)
         correctGrad.addColorStop(1, '#0000')
-        invalidGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        let invalidGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
         invalidGrad.addColorStop(0, '#0000')
         invalidGrad.addColorStop(.001, invalidColor)
         invalidGrad.addColorStop(.999, invalidColor)
         invalidGrad.addColorStop(1, '#0000')
+        let infoGrad = ctx.createLinearGradient(0, topY, 0, localMaxHeight)
+        infoGrad.addColorStop(0, '#0000')
+        infoGrad.addColorStop(.001, infoColor)
+        infoGrad.addColorStop(.999, infoColor)
+        infoGrad.addColorStop(1, '#0000')
+        
 
         //shrink the menu if it is larger than needed
         localMaxHeight = Math.min(
@@ -319,7 +321,7 @@ export function render() {
 
                 //render the info if any
                 if (item.info) {
-                    ctx.fillStyle = infoColor
+                    ctx.fillStyle = infoGrad
                     ctx.fillText(item.info, canvas.width - ctx.measureText(item.info).width - padding, y)
                 }
 

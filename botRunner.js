@@ -52,6 +52,9 @@ const Bot = (() => {
         async inUnderPlayerControl() {
             return await runCommand(['is_under_player_control'])
         },
+        async log(text, color) {
+            return await runCommand(['log',text,color])
+        },
     
     }
 })()

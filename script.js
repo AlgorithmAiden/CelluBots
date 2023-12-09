@@ -1,5 +1,6 @@
 import * as Colors from './utils/Colors.js'
 import * as Menu from './utils/Menu.js'
+import Console from './utils/Console.js'
     ;
 (async () => {
 
@@ -81,15 +82,15 @@ import * as Menu from './utils/Menu.js'
                 playerPrograms = true
                 playerFolderHandle = file
             }
-            if (file.name == 'botPrograms' && file.kind == 'directory') {
-                botPrograms = true
-                botFolderHandle = file
-            }
+            // if (file.name == 'botPrograms' && file.kind == 'directory') {
+            //     botPrograms = true
+            //     botFolderHandle = file
+            // }
         })
         if (!playerPrograms)
             playerFolderHandle = await createDirectory(folderHandle, 'playerPrograms')
-        if (!botPrograms)
-            botFolderHandle = await createDirectory(folderHandle, 'botPrograms')
+        // if (!botPrograms)
+        //     botFolderHandle = await createDirectory(folderHandle, 'botPrograms')
 
         //remove the button
         document.getElementById('getFolderButton').remove()
@@ -179,20 +180,20 @@ import * as Menu from './utils/Menu.js'
     const resources = {
         copper: {
             color: '#ef7646',
-            richness: 1000,
-            frequency: .4,
+            richness: 1_000,
+            frequency: .2,
             scale: 20
         },
         iron: {
             color: '#aaaaff',
-            richness: 1000,
-            frequency: .4,
+            richness: 1_000,
+            frequency: .2,
             scale: 20
         },
         coal: {
             color: '#000000',
-            richness: 1000,
-            frequency: .4,
+            richness: 1_000,
+            frequency: .2,
             scale: 20
         }
     }
@@ -211,12 +212,15 @@ import * as Menu from './utils/Menu.js'
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
         Menu.setMaxHeight(canvas.height * .2)
+        Menu.setTextSize(Math.floor(canvas.width, canvas.height) / 30)
+        Console.maxHeight = canvas.height * .2
+        Console.defaultTextSize = Math.floor(canvas.width, canvas.height) / 40
     }
     window.onresize = resize
     resize()
 
 
-    //to read / wright, use grid.get / grid.set
+    //to read / write, use grid.get / grid.set
     const grid = {
         get(x, y) {
             x = Math.round(x)
@@ -253,18 +257,19 @@ import * as Menu from './utils/Menu.js'
         scale: 10
     }
 
-    //this is the bot the player controls / the viewfinder is tied to
-    let hauntedBotId = 0
-
     //the color for empty spaces
     const backgroundColor = '#333'
 
+    //setup the console
+    Console.ctx = ctx
+    Console.defaultFont = 'Silkscreen'
+
+    //setup the menus
     Menu.setCtx(ctx)
     Menu.setMenu('home', {
-        title: 'This is the home menu',
         items: [
             { text: 'Quick Actions', func() { Menu.open('quick_actions') } },
-            { text: 'Toggle Auto Tick', info: 'Currently is off', func() { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
+            { text: 'Toggle Auto Tick', info: 'Currently is off', func(parentMenu, self) { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
             { text: 'Tick', func() { oneTick = true } },
             { text: 'Read Self Info', func() { Menu.open('self_info') } },
             { text: 'Set Self Program', async func() { await Menu.open('set_self_program') } },
@@ -469,11 +474,14 @@ import * as Menu from './utils/Menu.js'
         ]
     })
 
+    //setup the Menu
     Menu.setFont('Silkscreen')
     Menu.setCenterTitle(true)
 
+    //the same stacksize will be used for every item type
     const stackSize = 100
 
+    //setup bot colors
     const botBackgroundColor = '#000'
     const botModeColors = {}
     const botModes = [
@@ -488,12 +496,16 @@ import * as Menu from './utils/Menu.js'
     botModes.forEach((mode, index) => {
         const color = Colors.createColor()
         color.saturation = 100
-        color.lightness = 50
+        color.lightness = 25
         color.hue = Math.round(100 / (botModes.length - 1) * index)
         botModeColors[mode] = color.hex
     })
     botModeColors['Blank'] = '#ffffff'
 
+    //this is the bot the player controls / the viewfinder is tied to
+    let hauntedBotId = 0
+
+    //store the id so no bot will have the same id
     let nextBotId = 0
     let bots = {}
     function createBot(x, y, mode = 'Blank') {
@@ -513,11 +525,13 @@ import * as Menu from './utils/Menu.js'
         nextBotId++
     }
 
+    //some tester bots
     createBot(0, 0)
+    createBot(0, 1)
     createBot(1, 0)
-    createBot(2, 0)
-    createBot(3, 0)
+    createBot(1, 1)
 
+    //runs the code for every bot
     const runBots = (() => {
 
         //all bot code will be executed in the worker for speed
@@ -727,6 +741,10 @@ import * as Menu from './utils/Menu.js'
             },
             is_under_player_control() {
                 return bot.id == hauntedBotId
+            },
+            log(text, color) {
+                Console.log({ text: `[Bot${bot.id}] ${text}`, color })
+                return true
             }
         }
 
@@ -759,10 +777,8 @@ import * as Menu from './utils/Menu.js'
         }
     })()
 
+    //renders the grid stuff
     function renderGrid() {
-        //clear the screen with a bright flashy color
-        ctx.fillStyle = `rgb(${Math.random() * 255},${Math.random() * 255},${Math.random() * 255})`
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
 
         //calculate some numbers for faster speed
         const middleX = canvas.width / 2
@@ -781,9 +797,9 @@ import * as Menu from './utils/Menu.js'
         ctx.lineJoin = 'round'
         ctx.lineCap = 'round'
         const offset = halfCellSize * .7
+        const twoPi = Math.PI * 2
         const gapOffset = cellSize * .2
         const radius = halfCellSize * .35
-        const twoPi = Math.PI * 2
 
         //glowing layer gets drawn last
         let glowSpots = []
@@ -825,6 +841,8 @@ import * as Menu from './utils/Menu.js'
                     ctx.moveTo(centerX - offset, centerY - offset + gapOffset)
                     ctx.lineTo(centerX - offset, centerY - offset)
                     ctx.moveTo(centerX + radius, centerY)
+                    ctx.stroke()
+                    ctx.beginPath()
                     ctx.arc(centerX, centerY, radius, 0, twoPi)
                     ctx.stroke()
                 }
@@ -842,9 +860,11 @@ import * as Menu from './utils/Menu.js'
         })
     }
 
+    //keep track of ticking
     let autoTick = false
     let oneTick = false
 
+    //needed for hold effects
     let currentKeys = []
     document.addEventListener('keyup', event => {
         while (currentKeys.includes(event.key))
@@ -852,6 +872,7 @@ import * as Menu from './utils/Menu.js'
     })
     document.addEventListener('keydown', event => currentKeys.push(event.key))
 
+    //the game loop
     while (true) {
         if (Menu.getStack().length == 0) {
             if (currentKeys.includes('e'))
@@ -870,7 +891,8 @@ import * as Menu from './utils/Menu.js'
         viewPort.y = bots[hauntedBotId].y
 
         renderGrid()
-        Menu.render(Math.min(canvas.width, canvas.height) / 25, canvas.height * .2)
+        Menu.render()
+        Console.render(canvas.height * .2, 20)
 
         await new Promise(r => setTimeout(r, 0))
 

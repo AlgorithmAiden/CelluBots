@@ -14,3 +14,4 @@ if (self.mode == 'Mobile') {
 } else {
     await Bot.setSelfMode('Mobile')
 }
+Bot.log(self.mode)
