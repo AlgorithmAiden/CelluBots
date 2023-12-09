@@ -1,11 +1,11 @@
-const self = await Bot.getSelfInfo()
-if (self.mode == 'Mobile') {
+const me = await Bot.getSelfInfo()
+if (me.mode == 'Mobile') {
     if ((await Bot.look('left')).resource != undefined) {
         await Bot.setSelfMode('Harvester')
     } else {
         await Bot.moveSelf('left')
     }
-} else if (self.mode == 'Harvester') {
+} else if (me.mode == 'Harvester') {
     if ((await Bot.look('left')).resource == undefined) {
         await Bot.setSelfMode('Mobile')
     } else {
@@ -14,5 +14,3 @@ if (self.mode == 'Mobile') {
 } else {
     await Bot.setSelfMode('Mobile')
 }
-if (Math.random() < .01)
-    Bot.log(Math.random())

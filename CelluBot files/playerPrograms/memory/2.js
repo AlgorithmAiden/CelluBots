@@ -1,0 +1,1 @@
+await Bot.log((await Bot.getSelfInfo()).mem)

@@ -288,13 +288,13 @@ import Console from './utils/Console.js'
                     if (handle.kind == 'directory')
                         dirs.push(handle)
                     else {
-                        const path = await folderHandle.resolve(handle)
+                        const path = await playerFolderHandle.resolve(handle)
                         self.items.push({
-                            text: handle.name,
-                            info: path.join('/'),
+                            text: path.join('/'),
+                            info: handle.name,
                             async func() {
                                 bots[hauntedBotId].programCode = await readFile(handle)
-                                bots[hauntedBotId].programName = handle.name
+                                bots[hauntedBotId].programName = path.join('/')
                                 Menu.back()
                             }
                         })
@@ -387,8 +387,8 @@ import Console from './utils/Console.js'
             { text: 'Take Items', func() { Menu.open('quick_actions/take_items') }, info: '*' },
             { text: 'Give Items', func() { Menu.open('quick_actions/give_items') }, info: '*' },
             { text: 'Transfer Player Control', func() { Menu.open('quick_actions/transfer_player_control') } },
-            { text: 'Reset Bot Program', func() { bots[hauntedBotId].programCode = ``; bots[hauntedBotId].programName = 'No Program'; oneTick = true } },
-
+            { text: 'Reset Bot Program', func() { bots[hauntedBotId].programCode = ``; bots[hauntedBotId].programName = 'No Program' } },
+            { text: 'Reset Bot Mem', func() { bots[hauntedBotId].mem = {} } },
         ]
     })
     Menu.setMenu('quick_actions/move_self', {
@@ -628,7 +628,10 @@ import Console from './utils/Console.js'
                 return bot
             },
             look(dir) {
-                return grid.get(cordsAtDir(bot.x, bot.y, dir).x, cordsAtDir(bot.x, bot.y, dir).y)
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetBotId = grid.get(targetCords.x, targetCords.y).botId
+                if (targetBotId == undefined) return grid.get(targetCords.x, targetCords.y)
+                return bots[targetBotId]
             },
             harvest(dir, slot) {
                 if (!hasAction || bot.mode != 'Harvester') return false
@@ -747,12 +750,34 @@ import Console from './utils/Console.js'
             log(text, color) {
                 Console.log({ text: `[Bot ${bot.id}] ${text}`, color })
                 return true
+            },
+            async set_self_program(path) {
+                if (!hasAction) return false
+                path = path.split('/')
+                let currentHandle = playerFolderHandle
+                path.forEach(async (pathPart) => {
+                    const scan = await scanFolder(currentHandle)
+                    scan.forEach(handle => {
+                        if (handle.name == pathPart)
+                            currentHandle = handle
+                    })
+                })
+                console.log(currentHandle,path)
+                if (currentHandle.name == path[path.length - 1]) {
+                    bot.programCode = await readFile(currentHandle)
+                    bot.programName = currentHandle.name
+                    return true
+                }
+                return false
+            },
+            set_other_program(dir, path) {
+                if (bot.mode != 'Builder') return false
+                if (!hasAction) return false
             }
         }
 
         //handle all the messages
         worker.onmessage = async (m) => {
-            console.log(3)
             if (bot != undefined) {
                 const message = m.data
                 const command = message[0]
@@ -760,7 +785,6 @@ import Console from './utils/Console.js'
                 if (command == doneCode)
                     resolvePromise()
                 else if (messageFuncs[command] != undefined) {
-                    console.log(1)
                     let result = 'CRASH'
                     try {
                         result = await messageFuncs[command](...args)
@@ -768,7 +792,6 @@ import Console from './utils/Console.js'
                         Console.log({ text: `[Err Bot ${bot.id}] ${err}`, color: '#f00' })
 
                     }
-                    console.log(2)
                     worker.postMessage(result)
                 }
             }
@@ -776,7 +799,6 @@ import Console from './utils/Console.js'
 
         const bigTen = Math.pow(10, 10)
         return async () => {
-            let i = 0
             const botIds = Object.keys(bots)
             for (let index = 0; index < botIds.length; index++) {
                 const botId = botIds[index]
@@ -784,9 +806,7 @@ import Console from './utils/Console.js'
                 hasAction = true
                 doneCode = Math.floor(Math.random() * bigTen)
                 worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
-                console.log(5)
                 await new Promise(async (resolve) => resolvePromise = resolve)
-                console.log(4)
             }
             bot = undefined
         }

@@ -15,7 +15,6 @@ const Bot = (() => {
     }
 
     return {
-
         async setSelfMode(mode) {
             return await runCommand(['set_self_mode', mode])
         },
@@ -26,7 +25,7 @@ const Bot = (() => {
             return await runCommand(['set_self_mem', mem])
         },
         async setOtherMem(dir, mem) {
-            return await runCommand(['set_other_mem', mem])
+            return await runCommand(['set_other_mem', dir, mem])
         },
         async getSelfInfo() {
             return await runCommand(['get_self_info'])
@@ -55,17 +54,26 @@ const Bot = (() => {
         async log(text, color) {
             return await runCommand(['log',text,color])
         },
-    
+        async setSelfProgram(path) {
+            return await runCommand(['set_self_program', path])
+        },
+        async setOtherProgram(dir, path) {
+            return await runCommand(['set_other_program', dir, path])
+        },
     }
 })()
 `
 self.addEventListener('message', async (m) => {
     const message = m.data
-    console.log(message.code)
     if (message.type == 'keyPass') {
-        await new Promise((resolve, reject) => {
+        await new Promise(async (resolve, reject) => {
             try {
-                (new Function(`${BotCode}; ${message.code}`))()
+                await (func = new Function(`
+                    return (async () => {
+                        ${BotCode};
+                        ${message.code}
+                    })()    
+                `))()
                 resolve()
             } catch (err) {
                 console.error('Error running code:', err)

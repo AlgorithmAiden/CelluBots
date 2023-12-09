@@ -55,7 +55,7 @@ moveSelf(dir) * [Mobile] :
 setSelfMem(mem):
 ~ sets the mem of CB
 
-setOtherMem(dir):
+setOtherMem(dir, mem):
 ~ sets the mem of any bot at dir
 ~ returns true if there is a bot at dir
 
@@ -90,5 +90,14 @@ isUnderPlayerControl:
 log(text, color):
 ~ logs the text to the Console (not to be confused with the console)
 
-clearConsole():
-~ clears the Console
+setSelfProgram(path) * :
+~ the path is relative to the playerPrograms folder
+~ the path is case sensitive
+~ eg: 'drones/miners/test1.js'
+~ sets CB's program to the current code at path, if path is valid
+~ returns true if path is valid
+
+setOtherProgram(dir, path) * [Builder] :
+~ path structure is the same as setSelfProgram's path structure
+~ sets bot at dir's program to the current code at path, if path is valid
+~ returns true if path is valid and there is a bot at dir

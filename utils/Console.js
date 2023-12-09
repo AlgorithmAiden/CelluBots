@@ -39,7 +39,7 @@ const Console = {
         })
     },
     log(item) {
-        if (typeof item == Object)
+        if (Object.keys(item).length > 0)
             Console.items.unshift(item)
         else
             Console.items.unshift({ text: item })

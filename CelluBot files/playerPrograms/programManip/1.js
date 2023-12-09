@@ -1,0 +1,1 @@
+await Bot.setSelfProgram('griffin/crash.js')
