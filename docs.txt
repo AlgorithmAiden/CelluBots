@@ -89,3 +89,6 @@ isUnderPlayerControl:
 
 log(text, color):
 ~ logs the text to the Console (not to be confused with the console)
+
+clearConsole():
+~ clears the Console

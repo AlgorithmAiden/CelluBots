@@ -59,23 +59,25 @@ const Bot = (() => {
     }
 })()
 `
-self.addEventListener('message', (m) => {
+self.addEventListener('message', async (m) => {
     const message = m.data
+    console.log(message.code)
     if (message.type == 'keyPass') {
-        (new Function(
-            `
-            ${BotCode};
-                (async ()=>{
-                    try {
-                    await (async()=>{${message.code}})().then(() => {
-                        self.postMessage([${message.key}])
-                    })
-                } catch(err) {
-                    console.error('Error running code:', err)
-                    self.postMessage([${message.key}])
-                }
-                })()
-            `
-        ))()
+        await new Promise((resolve, reject) => {
+            try {
+                (new Function(`${BotCode}; ${message.code}`))()
+                resolve()
+            } catch (err) {
+                console.error('Error running code:', err)
+                reject(err)
+            }
+        })
+            .then(() => {
+                self.postMessage([message.key])
+            })
+            .catch((err) => {
+                console.error('Error running code:', err)
+                self.postMessage([message.key])
+            })
     }
 })

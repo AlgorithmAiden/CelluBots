@@ -752,6 +752,7 @@ import Console from './utils/Console.js'
 
         //handle all the messages
         worker.onmessage = async (m) => {
+            console.log(3)
             if (bot != undefined) {
                 const message = m.data
                 const command = message[0]
@@ -759,13 +760,15 @@ import Console from './utils/Console.js'
                 if (command == doneCode)
                     resolvePromise()
                 else if (messageFuncs[command] != undefined) {
-                    let result = false
+                    console.log(1)
+                    let result = 'CRASH'
                     try {
                         result = await messageFuncs[command](...args)
                     } catch (err) {
                         Console.log({ text: `[Err Bot ${bot.id}] ${err}`, color: '#f00' })
 
                     }
+                    console.log(2)
                     worker.postMessage(result)
                 }
             }
@@ -781,7 +784,9 @@ import Console from './utils/Console.js'
                 hasAction = true
                 doneCode = Math.floor(Math.random() * bigTen)
                 worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
+                console.log(5)
                 await new Promise(async (resolve) => resolvePromise = resolve)
+                console.log(4)
             }
             bot = undefined
         }

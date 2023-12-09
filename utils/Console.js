@@ -44,6 +44,10 @@ const Console = {
         else
             Console.items.unshift({ text: item })
         Console.lastAddedTime = Date.now()
+    },
+    clear() {
+        Console.items = []
+        Console.lastAddedTime = 0
     }
 }
 export default Console
