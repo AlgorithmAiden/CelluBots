@@ -219,6 +219,9 @@ import Console from './utils/Console.js'
     window.onresize = resize
     resize()
 
+    //keep track of ticking
+    let autoTick = false
+    let oneTick = false
 
     //to read / write, use grid.get / grid.set
     const grid = {
@@ -254,7 +257,8 @@ import Console from './utils/Console.js'
     const viewPort = {
         x: 0,
         y: 0,
-        scale: 10
+        scale: 10,
+        freeCam: false
     }
 
     //the color for empty spaces
@@ -269,10 +273,11 @@ import Console from './utils/Console.js'
     Menu.setMenu('home', {
         items: [
             { text: 'Quick Actions', func() { Menu.open('quick_actions') } },
-            { text: 'Toggle Auto Tick', info: 'Currently is off', func(parentMenu, self) { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` } },
+            { text: 'Toggle Auto Tick', func(parentMenu, self) { autoTick = !autoTick; self.info = `Currently is ${autoTick ? 'on' : 'off'}` }, info: `Currently is ${autoTick ? 'on' : 'off'}` },
             { text: 'Tick', func() { oneTick = true } },
             { text: 'Read Self Info', func() { Menu.open('self_info') } },
             { text: 'Set Self Program', async func() { await Menu.open('set_self_program') } },
+            { text: 'Toggle FreeCam', func(parentMenu, self) { viewPort.freeCam = !viewPort.freeCam; self.info = `Currently is ${viewPort.freeCam ? 'on' : 'off'}` }, info: `Currently is ${viewPort.freeCam ? 'on' : 'off'}` },
         ]
     })
     Menu.setMenu('set_self_program', {
@@ -992,10 +997,6 @@ import Console from './utils/Console.js'
         })
     }
 
-    //keep track of ticking
-    let autoTick = false
-    let oneTick = false
-
     //needed for hold effects
     let currentKeys = []
     document.addEventListener('keyup', event => {
@@ -1007,6 +1008,16 @@ import Console from './utils/Console.js'
     //the game loop
     while (true) {
         if (Menu.getStack().length == 0) {
+            if (viewPort.freeCam) {
+                if (currentKeys.includes('w'))
+                    viewPort.y -= viewPort.scale * .01
+                if (currentKeys.includes('d'))
+                    viewPort.x += viewPort.scale * .01
+                if (currentKeys.includes('s'))
+                    viewPort.y += viewPort.scale * .01
+                if (currentKeys.includes('a'))
+                    viewPort.x -= viewPort.scale * .01
+            }
             if (currentKeys.includes('e'))
                 viewPort.scale = Math.max(viewPort.scale * .99, -Infinity)
             if (currentKeys.includes('q'))
@@ -1019,8 +1030,10 @@ import Console from './utils/Console.js'
             await runBots()
         }
 
-        viewPort.x = bots[hauntedBotId].x
-        viewPort.y = bots[hauntedBotId].y
+        if (!viewPort.freeCam) {
+            viewPort.x = bots[hauntedBotId].x
+            viewPort.y = bots[hauntedBotId].y
+        }
 
         renderGrid()
         Menu.render()
