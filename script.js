@@ -755,14 +755,15 @@ import Console from './utils/Console.js'
                 if (!hasAction) return false
                 path = path.split('/')
                 let currentHandle = playerFolderHandle
-                path.forEach(async (pathPart) => {
+                for (let index = 0; index < path.length; index++) {
+                    const pathPart = path[index]
                     const scan = await scanFolder(currentHandle)
                     scan.forEach(handle => {
                         if (handle.name == pathPart)
                             currentHandle = handle
+
                     })
-                })
-                console.log(currentHandle,path)
+                }
                 if (currentHandle.name == path[path.length - 1]) {
                     bot.programCode = await readFile(currentHandle)
                     bot.programName = currentHandle.name
@@ -770,9 +771,29 @@ import Console from './utils/Console.js'
                 }
                 return false
             },
-            set_other_program(dir, path) {
+            async set_other_program(dir, path) {
                 if (bot.mode != 'Builder') return false
                 if (!hasAction) return false
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetBotId = grid.get(targetCords.x, targetCords.y).botId
+                if (targetBotId == undefined) return false
+                path = path.split('/')
+                let currentHandle = playerFolderHandle
+                for (let index = 0; index < path.length; index++) {
+                    const pathPart = path[index]
+                    const scan = await scanFolder(currentHandle)
+                    scan.forEach(handle => {
+                        if (handle.name == pathPart)
+                            currentHandle = handle
+                    })
+                }
+                if (currentHandle.name == path[path.length - 1]) {
+                    bots[targetBotId].programCode = await readFile(currentHandle)
+                    bots[targetBotId].programName = currentHandle.name
+                    return true
+                }
+                return false
+
             }
         }
 
