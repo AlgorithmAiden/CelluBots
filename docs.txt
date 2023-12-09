@@ -16,6 +16,9 @@ List of modes:
 
 Each bot has several values, below is an example bot:
 {
+    x: 3,
+    y: 2,
+    mem: {},
     botId: 12, //every bot has its own id
     mode: 'Mobile',
     programName: 'Hello.js',
@@ -57,7 +60,7 @@ setOtherMem(dir):
 ~ returns true if there is a bot at dir
 
 getSelfInfo():
-~ returns all the info about CB (botId, mode, programName, programCode, inventory)
+~ returns all the info about CB (x, y, botId, mode, programName, programCode, inventory, mem)
 
 look(dir):
 ~ returns all the info about the cell at dir

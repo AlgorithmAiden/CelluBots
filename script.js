@@ -387,6 +387,8 @@ import Console from './utils/Console.js'
             { text: 'Take Items', func() { Menu.open('quick_actions/take_items') }, info: '*' },
             { text: 'Give Items', func() { Menu.open('quick_actions/give_items') }, info: '*' },
             { text: 'Transfer Player Control', func() { Menu.open('quick_actions/transfer_player_control') } },
+            { text: 'Reset Bot Program', func() { bots[hauntedBotId].programCode = ``; bots[hauntedBotId].programName = 'No Program'; oneTick = true } },
+
         ]
     })
     Menu.setMenu('quick_actions/move_self', {
@@ -756,8 +758,16 @@ import Console from './utils/Console.js'
                 const args = message.splice(1)
                 if (command == doneCode)
                     resolvePromise()
-                else if (messageFuncs[command] != undefined)
-                    worker.postMessage((await messageFuncs[command](...args)))
+                else if (messageFuncs[command] != undefined) {
+                    let result = false
+                    try {
+                        result = await messageFuncs[command](...args)
+                    } catch (err) {
+                        Console.log({ text: `[Err Bot ${bot.id}] ${err}`, color: '#f00' })
+
+                    }
+                    worker.postMessage(result)
+                }
             }
         }
 

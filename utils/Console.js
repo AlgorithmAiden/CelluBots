@@ -39,7 +39,10 @@ const Console = {
         })
     },
     log(item) {
-        Console.items.unshift(item)
+        if (typeof item == Object)
+            Console.items.unshift(item)
+        else
+            Console.items.unshift({ text: item })
         Console.lastAddedTime = Date.now()
     }
 }
