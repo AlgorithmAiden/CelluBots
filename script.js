@@ -211,10 +211,10 @@ import Console from './utils/Console.js'
     function resize() {
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
-        Menu.setMaxHeight(canvas.height * .2)
-        Menu.setTextSize(Math.floor(canvas.width, canvas.height) / 40)
-        Console.maxHeight = canvas.height * .2
-        Console.defaultTextSize = Math.floor(canvas.width, canvas.height) / 40
+        Menu.setMaxHeight(canvas.height * .25)
+        Menu.setTextSize(Math.floor(canvas.width, canvas.height) / 50)
+        Console.maxHeight = canvas.height * .25
+        Console.defaultTextSize = Math.floor(canvas.width, canvas.height) / 50
     }
     window.onresize = resize
     resize()
@@ -309,6 +309,7 @@ import Console from './utils/Console.js'
             { text: 'x', func(parentMenu, self) { self.info = String(bots[hauntedBotId].x) } },
             { text: 'y', func(parentMenu, self) { self.info = String(bots[hauntedBotId].y) } },
             { text: 'mode', func(parentMenu, self) { self.info = bots[hauntedBotId].mode } },
+            { text: 'energy', func(parentMenu, self) { self.info = bots[hauntedBotId].energy } },
             { text: 'program', func(parentMenu, self) { self.info = bots[hauntedBotId].programName } },
             {
                 text: 'slot 0', func(parentMenu, self) {
@@ -387,6 +388,8 @@ import Console from './utils/Console.js'
             { text: 'Take Items', func() { Menu.open('quick_actions/take_items') }, info: '*' },
             { text: 'Give Items', func() { Menu.open('quick_actions/give_items') }, info: '*' },
             { text: 'Transfer Player Control', func() { Menu.open('quick_actions/transfer_player_control') } },
+            { text: 'Burn Coal', func() { bots[hauntedBotId].programCode = `Bot.burnCoal('0')`; bots[hauntedBotId].programName = 'Burn Coal'; oneTick = true }, info: '*' },
+            { text: 'Give Energy', func() { Menu.open('quick_actions/give_energy') }, info: '*' },
             { text: 'Reset Bot Program', func() { bots[hauntedBotId].programCode = ``; bots[hauntedBotId].programName = 'No Program' } },
             { text: 'Reset Bot Mem', func() { bots[hauntedBotId].mem = {} } },
         ]
@@ -402,14 +405,15 @@ import Console from './utils/Console.js'
     })
     Menu.setMenu('quick_actions/set_self_mode', {
         title: 'Choose new mode',
-        items: [
-            { text: 'Harvester', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Harvester')`; bots[hauntedBotId].programName = 'Harvester'; oneTick = true } },
-            { text: 'Mobile', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Mobile')`; bots[hauntedBotId].programName = 'Mobile'; oneTick = true } },
-            { text: 'Crafter', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Crafter')`; bots[hauntedBotId].programName = 'Crafter'; oneTick = true } },
-            { text: 'Builder', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Builder')`; bots[hauntedBotId].programName = 'Builder'; oneTick = true } },
-            { text: 'Destroyer', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Destroyer')`; bots[hauntedBotId].programName = 'Destroyer'; oneTick = true } },
-            { text: 'Transferer', func() { bots[hauntedBotId].programCode = `Bot.setSelfMode('Transferer')`; bots[hauntedBotId].programName = 'Transferer'; oneTick = true } },
-        ]
+        onCreate(self) {
+            self.items = [],
+                botModes.forEach(mode => {
+                    self.items.push({
+                        text: mode,
+                        func() { bots[hauntedBotId].mode = mode }
+                    })
+                })
+        },
     })
     Menu.setMenu('quick_actions/harvest', {
         title: 'Choose harvest direction',
@@ -423,19 +427,28 @@ import Console from './utils/Console.js'
     Menu.setMenu('quick_actions/take_items', {
         title: 'Choose direction to take item from',
         items: [
-            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.takeItem('up',0,0)`; bots[hauntedBotId].programName = 'Take Up'; oneTick = true } },
-            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.takeItem('right',0,0)`; bots[hauntedBotId].programName = 'Take Right'; oneTick = true } },
-            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.takeItem('down',0,0)`; bots[hauntedBotId].programName = 'Take Down'; oneTick = true } },
-            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.takeItem('left',0,0)`; bots[hauntedBotId].programName = 'Take Left'; oneTick = true } },
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.takeItem('up',0,0)`; bots[hauntedBotId].programName = 'Take Items Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.takeItem('right',0,0)`; bots[hauntedBotId].programName = 'Take Items Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.takeItem('down',0,0)`; bots[hauntedBotId].programName = 'Take Items Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.takeItem('left',0,0)`; bots[hauntedBotId].programName = 'Take Items Left'; oneTick = true } },
         ]
     })
     Menu.setMenu('quick_actions/give_items', {
         title: 'Choose direction to take item from',
         items: [
-            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.giveItem('up',0,0)`; bots[hauntedBotId].programName = 'Give Up'; oneTick = true } },
-            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.giveItem('right',0,0)`; bots[hauntedBotId].programName = 'Give Right'; oneTick = true } },
-            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.giveItem('down',0,0)`; bots[hauntedBotId].programName = 'Give Down'; oneTick = true } },
-            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.giveItem('left',0,0)`; bots[hauntedBotId].programName = 'Give Left'; oneTick = true } },
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.giveItem('up',0,0)`; bots[hauntedBotId].programName = 'Give Items Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.giveItem('right',0,0)`; bots[hauntedBotId].programName = 'Give Items Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.giveItem('down',0,0)`; bots[hauntedBotId].programName = 'Give Items Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.giveItem('left',0,0)`; bots[hauntedBotId].programName = 'Give Items Left'; oneTick = true } },
+        ]
+    })
+    Menu.setMenu('quick_actions/give_energy', {
+        title: 'Choose direction to give energy (gives %75)',
+        items: [
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.giveEnergy('up',(await Bot.getSelfInfo()).energy*.75)`; bots[hauntedBotId].programName = 'Give Energy Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.giveEnergy('right',(await Bot.getSelfInfo()).energy*.75)`; bots[hauntedBotId].programName = 'Give Energy Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.giveEnergy('down',(await Bot.getSelfInfo()).energy*.75)`; bots[hauntedBotId].programName = 'Give Energy Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.giveEnergy('left',(await Bot.getSelfInfo()).energy*.75)`; bots[hauntedBotId].programName = 'Give Energy Left'; oneTick = true } },
         ]
     })
     Menu.setMenu('quick_actions/transfer_player_control', {
@@ -485,6 +498,7 @@ import Console from './utils/Console.js'
 
     //setup bot colors
     const botBackgroundColor = '#000'
+    const deadBotAccentColor = '#333'
     const botModeColors = {}
     const botModes = [
         'Blank',
@@ -494,6 +508,7 @@ import Console from './utils/Console.js'
         'Builder',
         'Destroyer',
         'Transferer',
+        'Energizer',
     ]
     botModes.forEach((mode, index) => {
         const color = Colors.createColor()
@@ -504,22 +519,24 @@ import Console from './utils/Console.js'
     })
     botModeColors['Blank'] = '#ffffff'
 
-    //this is the bot the player controls / the viewfinder is tied to
-    let hauntedBotId = 0
+
+    //how much energy a bot can hold
+    const energyCapacity = 1000
 
     //store the id so no bot will have the same id
     let nextBotId = 0
     let bots = {}
-    function createBot(x, y, mode = 'Blank') {
+    function createBot(x, y, energy = 0) {
         bots[nextBotId] = {
             mem: {},
-            mode,
+            mode: 'Blank',
             programName: 'No program set',
             programCode: '',
             inventory: new Array(9).fill(0).map(slot => ({ type: '', count: 0 })),
             x,
             y,
-            id: nextBotId
+            id: nextBotId,
+            energy
         }
         grid.set(x, y, {
             botId: nextBotId
@@ -527,11 +544,14 @@ import Console from './utils/Console.js'
         nextBotId++
     }
 
+    //this is the bot the player controls / the viewfinder is tied to
+    let hauntedBotId = 0
+
     //some tester bots
-    createBot(0, 0)
+    createBot(0, 0, energyCapacity)
     createBot(0, 1)
     createBot(1, 0)
-    createBot(1, 1)
+    createBot(1, 1, energyCapacity)
 
     //runs the code for every bot
     const runBots = (() => {
@@ -804,6 +824,40 @@ import Console from './utils/Console.js'
                 }
                 return false
 
+            },
+            burn_coal(fromSlot, maxBurn) {
+                if (bot.mode != 'Energizer') return 0
+                if (!hasAction) return 0
+                if (bot.energy == energyCapacity) return 0
+                const slot = bot.inventory[fromSlot]
+                if (slot.type != 'coal') return 0
+                if (slot.count == 0) return 0
+                const burnAmount = Math.min(
+                    Math.round(maxBurn),
+                    slot.count,
+                    Math.ceil((energyCapacity - bot.energy) / 50)
+                )
+                if (slot.count == burnAmount)
+                    bot.inventory[fromSlot] = { type: 'empty', count: 0 }
+                else
+                    bot.inventory[fromSlot].count -= burnAmount
+                bot.energy = Math.min(energyCapacity, bot.energy + burnAmount * 50)
+                return burnAmount
+            },
+            give_energy(dir, maxEnergy) {
+                if (bot.mode != 'Energizer') return 0
+                if (!hasAction) return 0
+                const targetCords = cordsAtDir(bot.x, bot.y, dir)
+                const targetBotId = grid.get(targetCords.x, targetCords.y).botId
+                if (targetBotId == undefined) return 0
+                const givenEnergy = Math.round(Math.min(
+                    energyCapacity - bots[targetBotId].energy,
+                    bot.energy,
+                    maxEnergy
+                ))
+                bot.energy -= givenEnergy
+                bots[targetBotId].energy += givenEnergy
+                return givenEnergy
             }
         }
 
@@ -834,10 +888,13 @@ import Console from './utils/Console.js'
             for (let index = 0; index < botIds.length; index++) {
                 const botId = botIds[index]
                 bot = bots[botId]
-                hasAction = true
-                doneCode = Math.floor(Math.random() * bigTen)
-                worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
-                await new Promise(async (resolve) => resolvePromise = resolve)
+                if (bot.energy > 0) {
+                    bot.energy--
+                    hasAction = true
+                    doneCode = Math.floor(Math.random() * bigTen)
+                    worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
+                    await new Promise(async (resolve) => resolvePromise = resolve)
+                }
             }
             bot = undefined
         }
@@ -870,6 +927,8 @@ import Console from './utils/Console.js'
         //glowing layer gets drawn last
         let glowSpots = []
 
+        const radiusRatio = cellSize * 5 / energyCapacity
+
         //render each cell in range
         for (let x = minX; x <= maxX; x++)
             for (let y = minY; y <= maxY; y++) {
@@ -888,10 +947,19 @@ import Console from './utils/Console.js'
                     ceilCellSize
                 )
                 if (cell.botId != undefined) {
-                    ctx.strokeStyle = botModeColors[bots[cell.botId].mode]
+                    const bot = bots[cell.botId]
                     const centerX = middleX + (x - viewPort.x) * cellSize
                     const centerY = middleY + (y - viewPort.y) * cellSize
-                    glowSpots.push({ x: centerX, y: centerY, color: ctx.strokeStyle })
+                    if (bot.energy > 0) {
+                        ctx.strokeStyle = botModeColors[bot.mode]
+                        glowSpots.push({
+                            x: centerX,
+                            y: centerY,
+                            color: ctx.strokeStyle,
+                            radius: radiusRatio * bot.energy + cellSize
+                        })
+                    } else
+                        ctx.strokeStyle = deadBotAccentColor
                     ctx.beginPath()
                     ctx.moveTo(centerX - offset, centerY - offset)
                     ctx.lineTo(centerX - offset + gapOffset, centerY - offset)
@@ -915,14 +983,12 @@ import Console from './utils/Console.js'
             }
 
         //render all the glow spots
-        const glowSpotSize = cellSize * 5
-        const halfGlowSpotSize = glowSpotSize / 2
         glowSpots.forEach(spot => {
-            const grad = ctx.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, halfGlowSpotSize)
+            const grad = ctx.createRadialGradient(spot.x, spot.y, 0, spot.x, spot.y, spot.radius / 2)
             grad.addColorStop(0, `${spot.color.slice(0, 7)}66`)
             grad.addColorStop(1, `${spot.color.slice(0, 7)}00`)
             ctx.fillStyle = grad
-            ctx.fillRect(spot.x - halfGlowSpotSize, spot.y - halfGlowSpotSize, glowSpotSize, glowSpotSize)
+            ctx.fillRect(spot.x - spot.radius / 2, spot.y - spot.radius / 2, spot.radius, spot.radius)
         })
     }
 

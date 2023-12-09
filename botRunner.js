@@ -63,6 +63,12 @@ const Bot = (() => {
         async setOtherProgram(dir, path) {
             return await runCommand(['set_other_program', dir, path])
         },
+        async burnCoal(fromSlot, maxBurn=Infinity) {
+            return await runCommand(['burn_coal', fromSlot, maxBurn])
+        },
+        async giveEnergy(dir, maxEnergy) {
+            return await runCommand(['give_energy', dir, maxEnergy])
+        },
     }
 })()
 `
@@ -79,7 +85,7 @@ self.addEventListener('message', async (m) => {
                 `))()
                 resolve()
             } catch (err) {
-                console.error('Error running code:', err)
+                console.error('Error running code:', message.code, err)
                 reject(err)
             }
         })
@@ -87,7 +93,7 @@ self.addEventListener('message', async (m) => {
                 self.postMessage([message.key])
             })
             .catch((err) => {
-                console.error('Error running code:', err)
+                console.error('Error running code:', message.code, err)
                 self.postMessage([message.key])
             })
     }
