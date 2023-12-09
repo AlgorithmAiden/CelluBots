@@ -432,19 +432,19 @@ import Console from './utils/Console.js'
     Menu.setMenu('quick_actions/take_items', {
         title: 'Choose direction to take item from',
         items: [
-            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.takeItem('up',0,0)`; bots[hauntedBotId].programName = 'Take Items Up'; oneTick = true } },
-            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.takeItem('right',0,0)`; bots[hauntedBotId].programName = 'Take Items Right'; oneTick = true } },
-            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.takeItem('down',0,0)`; bots[hauntedBotId].programName = 'Take Items Down'; oneTick = true } },
-            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.takeItem('left',0,0)`; bots[hauntedBotId].programName = 'Take Items Left'; oneTick = true } },
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.takeItems('up',0,0)`; bots[hauntedBotId].programName = 'Take Items Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.takeItems('right',0,0)`; bots[hauntedBotId].programName = 'Take Items Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.takeItems('down',0,0)`; bots[hauntedBotId].programName = 'Take Items Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.takeItems('left',0,0)`; bots[hauntedBotId].programName = 'Take Items Left'; oneTick = true } },
         ]
     })
     Menu.setMenu('quick_actions/give_items', {
         title: 'Choose direction to take item from',
         items: [
-            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.giveItem('up',0,0)`; bots[hauntedBotId].programName = 'Give Items Up'; oneTick = true } },
-            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.giveItem('right',0,0)`; bots[hauntedBotId].programName = 'Give Items Right'; oneTick = true } },
-            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.giveItem('down',0,0)`; bots[hauntedBotId].programName = 'Give Items Down'; oneTick = true } },
-            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.giveItem('left',0,0)`; bots[hauntedBotId].programName = 'Give Items Left'; oneTick = true } },
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.giveItems('up',0,0)`; bots[hauntedBotId].programName = 'Give Items Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.giveItems('right',0,0)`; bots[hauntedBotId].programName = 'Give Items Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.giveItems('down',0,0)`; bots[hauntedBotId].programName = 'Give Items Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.giveItems('left',0,0)`; bots[hauntedBotId].programName = 'Give Items Left'; oneTick = true } },
         ]
     })
     Menu.setMenu('quick_actions/give_energy', {
@@ -557,6 +557,9 @@ import Console from './utils/Console.js'
     createBot(0, 1)
     createBot(1, 0)
     createBot(1, 1, energyCapacity)
+
+    bots[0].mode='Transferer'
+    bots[0].inventory[0]={type:'coal',count:10}
 
     //runs the code for every bot
     const runBots = (() => {
