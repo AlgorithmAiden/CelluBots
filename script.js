@@ -541,7 +541,14 @@ import Console from './utils/Console.js'
         items: [
             { text: 'Max Out Self Energy', func() { bots[hauntedBotId].energy = energyCapacity } },
             { text: 'Create Bot Above', func() { createBot(bots[hauntedBotId].x, bots[hauntedBotId].y - 1) } },
-            { text: 'Delete Cell Above', func() { grid.set(bots[hauntedBotId].x, bots[hauntedBotId].y - 1, {}) } },
+            {
+                text: 'Delete Cell Above', func() {
+                    const CB = bots[hauntedBotId]
+                    if (grid.get(CB.x, CB.y - 1).botId != undefined)
+                        delete bots[grid.get(CB.x, CB.y - 1)]
+                    grid.set(CB.x, CB.y - 1, {})
+                }
+            },
             { text: 'Clear Inventory', func() { bots[hauntedBotId].inventory = new Array(9).fill(0).map(item => ({ count: 0, type: 'empty' })) } },
         ],
     })
@@ -634,16 +641,8 @@ import Console from './utils/Console.js'
     //this is the bot the player controls / the viewfinder is tied to
     let hauntedBotId = 0
 
-    //some tester bots
+    //you
     createBot(0, 0, energyCapacity)
-    createBot(0, 1)
-    createBot(1, 0)
-    createBot(1, 1, energyCapacity)
-
-    // bots[0].mode='Transferer'
-    // bots[0].inventory[0]={type:'coal',count:10}
-
-    //runs the code for every bot
 
     async function save() {
         const saveValue = JSON.stringify({
