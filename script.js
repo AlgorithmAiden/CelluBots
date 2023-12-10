@@ -173,9 +173,9 @@ import Console from './utils/Console.js'
     let resources = {
         copper: {
             color: '#ef7646',
-            richness: 1_000,
-            frequency: .3,
-            scale: 30
+            richness: 5_000,
+            frequency: .2,
+            scale: 20
         },
         iron: {
             color: '#aaaaff',
@@ -185,9 +185,9 @@ import Console from './utils/Console.js'
         },
         coal: {
             color: '#000000',
-            richness: 5_000,
-            frequency: .2,
-            scale: 20
+            richness: 1_000,
+            frequency: .25,
+            scale: 30
         }
     }
 
@@ -301,7 +301,7 @@ import Console from './utils/Console.js'
             scan.forEach(item => {
                 self.items.push({
                     text: item.name.split('.')[0],
-                    func() { load(item) }
+                    func() { load(item); Menu.back() }
                 })
             })
         }
