@@ -293,7 +293,7 @@ import Console from './utils/Console.js'
             { text: 'Read Self Info', func() { Menu.open('self_info') } },
             { text: 'Set Self Program', async func() { await Menu.open('set_self_program') } },
             { text: 'Toggle FreeCam', func(parentMenu, self) { viewPort.freeCam = !viewPort.freeCam; self.info = `Currently is ${viewPort.freeCam ? 'on' : 'off'}` }, info: `Currently is ${viewPort.freeCam ? 'on' : 'off'}` },
-            { text: 'Create Save File', func: save, info: 'Will reload the page' },
+            { text: 'Create Save File', func: save, info: 'May reload the page' },
             { text: 'Load Save File', async func() { await Menu.open('load_save') } },
             { text: 'Change Minimum Tick Time', func() { Menu.open('min_tick_time') } },
             { text: 'Admin Commands', func() { Menu.open('admin') } },
