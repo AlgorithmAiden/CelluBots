@@ -174,18 +174,18 @@ import Console from './utils/Console.js'
         copper: {
             color: '#ef7646',
             richness: 1_000,
-            frequency: .2,
-            scale: 20
+            frequency: .3,
+            scale: 30
         },
         iron: {
             color: '#aaaaff',
-            richness: 1_000,
+            richness: 5_000,
             frequency: .2,
             scale: 20
         },
         coal: {
             color: '#000000',
-            richness: 1_000,
+            richness: 5_000,
             frequency: .2,
             scale: 20
         }
@@ -611,10 +611,7 @@ import Console from './utils/Console.js'
             if (typeof grid[key] != 'function')
                 delete grid[key]
         })
-        grid = {...grid,...saveValue.grid}
-        saveValue.grid.forEach(item => {
-            grid[item[0]] = item[1]
-        })
+        saveValue.grid.forEach(item => grid[item[0]] = item[1])
         resources = saveValue.resources
     }
 
