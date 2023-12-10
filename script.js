@@ -1014,8 +1014,7 @@ import Console from './utils/Console.js'
                     try {
                         result = await messageFuncs[command](...args)
                     } catch (err) {
-                        Console.log({ text: `[Err Bot ${bot.id}] ${err}`, color: '#f00' })
-
+                        console.err(err)
                     }
                     worker.postMessage(result)
                 }
