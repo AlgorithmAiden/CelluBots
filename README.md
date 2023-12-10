@@ -47,8 +47,9 @@ The commands are as follows:
 (*: costs an action point)
 ([X]: can only run if CM is X, if CM is not X the function will return false)
 
-setSelfMode(mode):
+setSelfMode(mode) * :
 ~ if mode is a valid mode, sets CM to mode
+~ costs 1 energy per held item
 ~ returns true if mode is a valid mode
 
 setOtherMode(dir, mode) * [Builder] :

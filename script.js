@@ -716,16 +716,14 @@ import Console from './utils/Console.js'
         const messageFuncs = {
             set_self_mode(mode) {
                 if (hasAction && botModes.includes(mode)) {
-                    let empty = true
+                    let cost = 0
                     bot.inventory.forEach(slot => {
-                        if (slot.count > 0)
-                            empty = false
+                        cost += slot.count
                     })
-                    if (empty) {
-                        bot.mode = mode
-                        hasAction = false
-                        return true
-                    }
+                    bot.energy -= cost
+                    bot.mode = mode
+                    hasAction = false
+                    return true
                 }
                 return false
             },
@@ -736,7 +734,10 @@ import Console from './utils/Console.js'
                 const targetCords = cordsAtDir(bot.x, bot.y, dir)
                 const targetBotId = grid.get(targetCords.x, targetCords.y).botId
                 if (targetBotId == undefined) return false
+                let cost = 0
+                bots[targetBotId].inventory.forEach(slot => cost += slot.count)
                 bots[targetBotId].mode = mode
+                bots[targetBotId].energy -= cost
                 return true
             },
             move_self(dir) {
@@ -1034,7 +1035,8 @@ import Console from './utils/Console.js'
                     doneCode = Math.floor(Math.random() * bigTen)
                     worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
                     await new Promise(async (resolve) => resolvePromise = resolve)
-                }
+                } else
+                    bot.mode = 'Blank'
             }
             bot = undefined
         }
