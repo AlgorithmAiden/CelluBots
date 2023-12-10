@@ -8,7 +8,7 @@ import Console from './utils/Console.js'
     let folderHandle
 
     //for the sub folders used for programs
-    let playerFolderHandle, botFolderHandle
+    let playerFolderHandle, savesFolderHandle
 
     async function deleteFile(handle, relativePath) {
         await handle.removeEntry(relativePath, { recursive: true })
@@ -67,30 +67,23 @@ import Console from './utils/Console.js'
             r()
         })
 
-        // //force the write files / delete files permissions
-        // try {
-        //     // await createAndWriteFile(folderHandle, 'IGNORE_ME.txt', 'Goodbye World :[')
-        //     // await deleteFile(folderHandle, 'IGNORE_ME.txt')
-        // } catch {
-        //     // location.reload()
-        // }
 
-        //create the playerPrograms / botPrograms folders if needed
-        let playerPrograms, botPrograms;
+        //create the playerPrograms / saves folders if needed
+        let playerPrograms, saves;
         (await scanFolder(folderHandle)).forEach(file => {
             if (file.name == 'playerPrograms' && file.kind == 'directory') {
                 playerPrograms = true
                 playerFolderHandle = file
             }
-            // if (file.name == 'botPrograms' && file.kind == 'directory') {
-            //     botPrograms = true
-            //     botFolderHandle = file
-            // }
+            if (file.name == 'saves' && file.kind == 'directory') {
+                saves = true
+                savesFolderHandle = file
+            }
         })
         if (!playerPrograms)
             playerFolderHandle = await createDirectory(folderHandle, 'playerPrograms')
-        // if (!botPrograms)
-        //     botFolderHandle = await createDirectory(folderHandle, 'botPrograms')
+        if (!saves)
+            savesFolderHandle = await createDirectory(folderHandle, 'saves')
 
         //remove the button
         document.getElementById('getFolderButton').remove()
@@ -177,7 +170,7 @@ import Console from './utils/Console.js'
     })()
 
     //hold all the resource info
-    const resources = {
+    let resources = {
         copper: {
             color: '#ef7646',
             richness: 1_000,
@@ -225,24 +218,29 @@ import Console from './utils/Console.js'
 
     //to read / write, use grid.get / grid.set
     const grid = {
+        generate(x, y) {
+            let cell = {}
+            const distance = Math.sqrt(-x * -x + -y * -y)
+            Object.keys(resources).forEach(name => {
+                const resource = resources[name]
+                const noise = perlinNoise(x / resource.scale, y / resource.scale, resource.seed)
+                const frequency = resource.frequency
+                if (noise < frequency && distance > 10) {
+                    const richness = Math.ceil((1 - noise / frequency) * resource.richness)
+                    if ((!cell.resource) || ((!cell.resource) && cell.count < richness))
+                        cell = { resource: name, count: richness }
+                }
+            })
+            return cell
+        },
         get(x, y) {
             x = Math.round(x)
             y = Math.round(y)
             const cords = `${x}/${y}`
             if (!grid[cords]) {
-                let cell = {}
-                const distance = Math.sqrt(-x * -x + -y * -y)
-                Object.keys(resources).forEach(name => {
-                    const resource = resources[name]
-                    const noise = perlinNoise(x / resource.scale, y / resource.scale, resource.seed)
-                    const frequency = resource.frequency
-                    if (noise < frequency && distance > 10) {
-                        const richness = Math.ceil((1 - noise / frequency) * resource.richness)
-                        if ((!cell.resource) || ((!cell.resource) && cell.count < richness))
-                            cell = { resource: name, count: richness }
-                    }
-                })
+                const cell = grid.generate(x, y)
                 grid[cords] = cell
+                return cell
             }
             return grid[cords]
         },
@@ -251,6 +249,18 @@ import Console from './utils/Console.js'
             y = Math.round(y)
             grid[`${x}/${y}`] = value
         },
+        getChanges() {
+            const changes = []
+            Object.keys(grid).forEach(key => {
+                if (typeof grid[key] != 'function') {
+                    const [x, y] = key.split('/')
+                    if (JSON.stringify(grid[key]) != JSON.stringify(grid.generate(x, y))) {
+                        changes.push([key, grid[key]])
+                    }
+                }
+            })
+            return changes
+        }
     }
 
     //x / y are for the center, scale is the number of cells to show on the smallest side
@@ -278,7 +288,23 @@ import Console from './utils/Console.js'
             { text: 'Read Self Info', func() { Menu.open('self_info') } },
             { text: 'Set Self Program', async func() { await Menu.open('set_self_program') } },
             { text: 'Toggle FreeCam', func(parentMenu, self) { viewPort.freeCam = !viewPort.freeCam; self.info = `Currently is ${viewPort.freeCam ? 'on' : 'off'}` }, info: `Currently is ${viewPort.freeCam ? 'on' : 'off'}` },
+            { text: 'Create Save File', func: save, info: 'Will reload the page' },
+            { text: 'Load Save File', async func() { await Menu.open('load_save') } }
         ]
+    })
+    Menu.setMenu('load_save', {
+        title: 'Choose File To Load',
+        async onCreate(self) {
+            self.items = []
+            const scan = await scanFolder(savesFolderHandle)
+            scan.forEach(item => {
+                self.items.push({
+                    text: item.name.split('.')[0],
+                    info: item.name,
+                    func() { load(item) }
+                })
+            })
+        }
     })
     Menu.setMenu('set_self_program', {
         title: 'Choose new program',
@@ -562,6 +588,34 @@ import Console from './utils/Console.js'
     // bots[0].inventory[0]={type:'coal',count:10}
 
     //runs the code for every bot
+
+    async function save() {
+        const saveValue = JSON.stringify({
+            bots,
+            nextBotId,
+            grid: grid.getChanges(),
+            hauntedBotId,
+            resources
+        })
+        await createAndWriteFile(savesFolderHandle, `${Date.now()}.json`, saveValue)
+    }
+
+    async function load(handle) {
+        const rawFile = await readFile(handle)
+        const saveValue = JSON.parse(rawFile)
+        bots = saveValue.bots
+        hauntedBotId = saveValue.hauntedBotId
+        nextBotId = saveValue.nextBotId
+        Object.keys(grid).forEach(key => {
+            if (typeof grid[key] != 'function')
+                delete grid[key]
+        })
+        saveValue.grid.forEach(item => {
+            grid[item[0]] = item[1]
+        })
+        resources = saveValue.resources
+    }
+
     const runBots = (() => {
 
         //all bot code will be executed in the worker for speed
