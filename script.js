@@ -611,6 +611,7 @@ import Console from './utils/Console.js'
             if (typeof grid[key] != 'function')
                 delete grid[key]
         })
+        grid = {...grid,...saveValue.grid}
         saveValue.grid.forEach(item => {
             grid[item[0]] = item[1]
         })
