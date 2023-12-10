@@ -10,8 +10,12 @@ import Console from './utils/Console.js'
     //for the sub folders used for programs
     let playerFolderHandle, savesFolderHandle
 
-    async function deleteFile(handle, relativePath) {
+    async function deleteFolderChild(handle, relativePath) {
         await handle.removeEntry(relativePath, { recursive: true })
+    }
+
+    async function deleteFile(handle) {
+        await handle.remove()
     }
 
     async function createDirectory(parentHandle, dirName) {
@@ -215,9 +219,10 @@ import Console from './utils/Console.js'
     //keep track of ticking
     let autoTick = false
     let oneTick = false
+    let minTickTime = 0
 
     //to read / write, use grid.get / grid.set
-    const grid = {
+    let grid = {
         generate(x, y) {
             let cell = {}
             const distance = Math.sqrt(-x * -x + -y * -y)
@@ -264,7 +269,7 @@ import Console from './utils/Console.js'
     }
 
     //x / y are for the center, scale is the number of cells to show on the smallest side
-    const viewPort = {
+    let viewPort = {
         x: 0,
         y: 0,
         scale: 10,
@@ -290,8 +295,13 @@ import Console from './utils/Console.js'
             { text: 'Toggle FreeCam', func(parentMenu, self) { viewPort.freeCam = !viewPort.freeCam; self.info = `Currently is ${viewPort.freeCam ? 'on' : 'off'}` }, info: `Currently is ${viewPort.freeCam ? 'on' : 'off'}` },
             { text: 'Create Save File', func: save, info: 'Will reload the page' },
             { text: 'Load Save File', async func() { await Menu.open('load_save') } },
+            { text: 'Change Minimum Tick Time', func() { Menu.open('min_tick_time') } },
             { text: 'Admin Commands', func() { Menu.open('admin') } },
-        ]
+        ],
+        onCreate(self) {
+            self.items[1].info = `Currently is ${autoTick ? 'on' : 'off'}`
+            self.items[5].info = `Currently is ${viewPort.freeCam ? 'on' : 'off'}`
+        }
     })
     Menu.setMenu('load_save', {
         title: 'Choose File To Load',
@@ -535,6 +545,36 @@ import Console from './utils/Console.js'
             { text: 'Clear Inventory', func() { bots[hauntedBotId].inventory = new Array(9).fill(0).map(item => ({ count: 0, type: 'empty' })) } },
         ],
     })
+    Menu.setMenu('min_tick_time', {
+        items: [
+            { text: 'No Delay', func(parentMenu) { minTickTime = 0; parentMenu.onCreate(parentMenu) }, info: '0 Milliseconds' },
+            { text: '.01 Seconds', func(parentMenu) { minTickTime = 10; parentMenu.onCreate(parentMenu) }, info: '10 Milliseconds' },
+            { text: '.05 Seconds', func(parentMenu) { minTickTime = 50; parentMenu.onCreate(parentMenu) }, info: '50 Milliseconds' },
+            { text: '.1 Seconds', func(parentMenu) { minTickTime = 100; parentMenu.onCreate(parentMenu) }, info: '100 Milliseconds' },
+            { text: '.25 Seconds', func(parentMenu) { minTickTime = 250; parentMenu.onCreate(parentMenu) }, info: '250 Milliseconds' },
+            { text: '.5 Seconds', func(parentMenu) { minTickTime = 500; parentMenu.onCreate(parentMenu) }, info: '500 Milliseconds' },
+            { text: '1 Second', func(parentMenu) { minTickTime = 1_000; parentMenu.onCreate(parentMenu) }, info: '1000 Milliseconds' },
+            { text: '2 Seconds', func(parentMenu) { minTickTime = 2_000; parentMenu.onCreate(parentMenu) }, info: '2000 Milliseconds' },
+            { text: '5 Seconds', func(parentMenu) { minTickTime = 5_000; parentMenu.onCreate(parentMenu) }, info: '5000 Milliseconds' },
+            { text: 'Add .001 Seconds', func(parentMenu) { minTickTime += 1; parentMenu.onCreate(parentMenu) }, info: '1 Millisecond' },
+            { text: 'Add .01 Seconds', func(parentMenu) { minTickTime += 10; parentMenu.onCreate(parentMenu) }, info: '10 Milliseconds' },
+            { text: 'Add .1 Seconds', func(parentMenu) { minTickTime += 100; parentMenu.onCreate(parentMenu) }, info: '100 Milliseconds' },
+            { text: 'Subtract .001 Seconds', func(parentMenu) { minTickTime -= 1; parentMenu.onCreate(parentMenu) }, info: '1 Millisecond' },
+            { text: 'Subtract .01 Seconds', func(parentMenu) { minTickTime -= 10; parentMenu.onCreate(parentMenu) }, info: '10 Milliseconds' },
+            { text: 'Subtract .1 Seconds', func(parentMenu) { minTickTime -= 100; parentMenu.onCreate(parentMenu) }, info: '100 Milliseconds' },
+            { text: 'Multiply By 2', func(parentMenu) { minTickTime = minTickTime * 2; parentMenu.onCreate(parentMenu) } },
+            { text: 'Multiply By 10', func(parentMenu) { minTickTime = minTickTime * 10; parentMenu.onCreate(parentMenu) } },
+            { text: 'Divide By 2', func(parentMenu) { minTickTime = minTickTime / 2; parentMenu.onCreate(parentMenu) } },
+            { text: 'Divide By 10', func(parentMenu) { minTickTime = minTickTime / 10; parentMenu.onCreate(parentMenu) } },
+        ],
+        onCreate(self) {
+            minTickTime = Math.max(0, minTickTime)
+            if (minTickTime == 1_000)
+                self.title = `Current Minimum Tick Time is 1 Second Per Tick`
+            else
+                self.title = `Current Minimum Tick Time is ${minTickTime / 1000} Seconds Per Tick`
+        }
+    })
 
     //setup the Menu
     Menu.setFont('Silkscreen')
@@ -611,7 +651,10 @@ import Console from './utils/Console.js'
             nextBotId,
             grid: grid.getChanges(),
             hauntedBotId,
-            resources
+            resources,
+            minTickTime,
+            viewPort,
+            autoTick
         })
         const now = new Date(Date.now())
         const nowText = `${(new Date().toString().match(/\(([A-Za-z\s].*)\)/)[1]).split(' ').map(value => value[0]).join('')}-${now.getFullYear()}-${now.getMonth()}-${now.getDay()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`
@@ -619,17 +662,29 @@ import Console from './utils/Console.js'
     }
 
     async function load(handle) {
-        const rawFile = await readFile(handle)
-        const saveValue = JSON.parse(rawFile)
-        bots = saveValue.bots
-        hauntedBotId = saveValue.hauntedBotId
-        nextBotId = saveValue.nextBotId
-        Object.keys(grid).forEach(key => {
-            if (typeof grid[key] != 'function')
-                delete grid[key]
-        })
-        saveValue.grid.forEach(item => grid[item[0]] = item[1])
-        resources = saveValue.resources
+        try {
+            const rawFile = await readFile(handle)
+            const saveValue = JSON.parse(rawFile);
+            ['bots', 'hauntedBotId', 'nextBotId', 'grid', 'resources', 'minTickTime', 'viewPort', 'autoTick'].forEach(key => {
+                if (saveValue[key] == undefined)
+                    throw `Missing key ${key}`
+            })
+            bots = saveValue.bots
+            hauntedBotId = saveValue.hauntedBotId
+            nextBotId = saveValue.nextBotId
+            Object.keys(grid).forEach(key => {
+                if (typeof grid[key] != 'function')
+                    delete grid[key]
+            })
+            saveValue.grid.forEach(item => grid[item[0]] = item[1])
+            resources = saveValue.resources
+            minTickTime = saveValue.minTickTime
+            viewPort = saveValue.viewPort
+            autoTick = saveValue.autoTick
+        } catch (err) {
+            console.error(err)
+            await deleteFile(handle)
+        }
     }
 
     const runBots = (() => {
@@ -1087,6 +1142,7 @@ import Console from './utils/Console.js'
     document.addEventListener('keydown', event => currentKeys.push(event.key))
 
     //the game loop
+    let lastTick = 0
     while (true) {
         if (Menu.getStack().length == 0) {
             if (viewPort.freeCam) {
@@ -1105,10 +1161,11 @@ import Console from './utils/Console.js'
                 viewPort.scale *= 1.01
         }
 
-        if (autoTick || oneTick) {
+        if ((autoTick || oneTick) && Date.now() - lastTick >= minTickTime) {
             console.log('tick')
             oneTick = false
             await runBots()
+            lastTick = Date.now()
         }
 
         if (!viewPort.freeCam) {
@@ -1121,7 +1178,6 @@ import Console from './utils/Console.js'
         Console.render(canvas.height * .2, 20)
 
         await new Promise(r => setTimeout(r, 0))
-
     }
 
 
