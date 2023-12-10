@@ -289,7 +289,8 @@ import Console from './utils/Console.js'
             { text: 'Set Self Program', async func() { await Menu.open('set_self_program') } },
             { text: 'Toggle FreeCam', func(parentMenu, self) { viewPort.freeCam = !viewPort.freeCam; self.info = `Currently is ${viewPort.freeCam ? 'on' : 'off'}` }, info: `Currently is ${viewPort.freeCam ? 'on' : 'off'}` },
             { text: 'Create Save File', func: save, info: 'Will reload the page' },
-            { text: 'Load Save File', async func() { await Menu.open('load_save') } }
+            { text: 'Load Save File', async func() { await Menu.open('load_save') } },
+            { text: 'Admin Commands', func() { Menu.open('admin') } },
         ]
     })
     Menu.setMenu('load_save', {
@@ -425,7 +426,7 @@ import Console from './utils/Console.js'
         ]
     })
     Menu.setMenu('quick_actions/move_self', {
-        title: 'Choose move direction',
+        title: 'Choose Move Direction',
         items: [
             { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.moveSelf('up')`; bots[hauntedBotId].programName = 'Move Up'; oneTick = true } },
             { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.moveSelf('right')`; bots[hauntedBotId].programName = 'Move Right'; oneTick = true } },
@@ -482,41 +483,57 @@ import Console from './utils/Console.js'
         ]
     })
     Menu.setMenu('quick_actions/transfer_player_control', {
-        title: 'Choose direction to move player control',
+        title: 'Choose New Bot For Control',
+        onCreate(self) {
+            self.items = [
+                {
+                    text: 'Up', func() {
+                        const currentBot = bots[hauntedBotId]
+                        let newId = grid.get(currentBot.x, currentBot.y - 1).botId
+                        if (newId != undefined)
+                            hauntedBotId = newId
+                    }
+                },
+                {
+                    text: 'Right', func() {
+                        const currentBot = bots[hauntedBotId]
+                        let newId = grid.get(currentBot.x + 1, currentBot.y).botId
+                        if (newId != undefined)
+                            hauntedBotId = newId
+                    }
+                },
+                {
+                    text: 'Down', func() {
+                        const currentBot = bots[hauntedBotId]
+                        let newId = grid.get(currentBot.x, currentBot.y + 1).botId
+                        if (newId != undefined)
+                            hauntedBotId = newId
+                    }
+                },
+                {
+                    text: 'Left', func() {
+                        const currentBot = bots[hauntedBotId]
+                        let newId = grid.get(currentBot.x - 1, currentBot.y).botId
+                        if (newId != undefined)
+                            hauntedBotId = newId
+                    }
+                },
+            ]
+            Object.keys(bots).forEach(id => {
+                self.items.push({
+                    text: `Bot ${id}`,
+                    func() { hauntedBotId = id }
+                })
+            })
+        }
+    })
+    Menu.setMenu('admin', {
         items: [
-            {
-                text: 'Up', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x, currentBot.y - 1).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-            {
-                text: 'Right', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x + 1, currentBot.y).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-            {
-                text: 'Down', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x, currentBot.y + 1).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-            {
-                text: 'Left', func() {
-                    const currentBot = bots[hauntedBotId]
-                    let newId = grid.get(currentBot.x - 1, currentBot.y).botId
-                    if (newId != undefined)
-                        hauntedBotId = newId
-                }
-            },
-        ]
+            { text: 'Max Out Self Energy', func() { bots[hauntedBotId].energy = energyCapacity } },
+            { text: 'Create Bot Above', func() { createBot(bots[hauntedBotId].x, bots[hauntedBotId].y - 1) } },
+            { text: 'Delete Cell Above', func() { grid.set(bots[hauntedBotId].x, bots[hauntedBotId].y - 1, {}) } },
+            { text: 'Clear Inventory', func() { bots[hauntedBotId].inventory = new Array(9).fill(0).map(item => ({ count: 0, type: 'empty' })) } },
+        ],
     })
 
     //setup the Menu
@@ -826,11 +843,18 @@ import Console from './utils/Console.js'
                     bots[targetBotId].inventory[toSlotIndex].count += moveCount
                 return moveCount
             },
-            move_player_control(dir) {
-                const targetCords = cordsAtDir(bot.x, bot.y, dir)
-                const newId = grid.get(targetCords.x, targetCords.y)
-                if (newId != undefined) {
-                    hauntedBotId = newId
+            move_player_control(target) {
+                if (typeof target == 'string') {
+                    const targetCords = cordsAtDir(bot.x, bot.y, target)
+                    const newId = grid.get(targetCords.x, targetCords.y)
+                    if (newId != undefined) {
+                        hauntedBotId = newId
+                        return true
+                    }
+                }
+                if (typeof target == 'number') {
+                    if (bots[target] != undefined)
+                        hauntedBotId = target
                     return true
                 }
                 return false
@@ -914,7 +938,7 @@ import Console from './utils/Console.js'
                 const givenEnergy = Math.round(Math.min(
                     energyCapacity - bots[targetBotId].energy,
                     bot.energy,
-                    maxEnergy
+                    Math.max(0, maxEnergy)
                 ))
                 bot.energy -= givenEnergy
                 bots[targetBotId].energy += givenEnergy

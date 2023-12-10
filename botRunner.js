@@ -48,8 +48,8 @@ const Bot = (() => {
         async giveItems(dir, fromSlot, toSlot, maxCount = Infinity) {
             return await runCommand(['give_items', dir, fromSlot, toSlot, maxCount])
         },
-        async movePlayerControl(dir) {
-            return await runCommand(['move_player_control', dir])
+        async movePlayerControl(target) {
+            return await runCommand(['move_player_control', target])
         },
         async inUnderPlayerControl() {
             return await runCommand(['is_under_player_control'])

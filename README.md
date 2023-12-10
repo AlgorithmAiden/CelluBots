@@ -87,8 +87,11 @@ giveItems(dir, fromSlot, toSlot, maxCount) * [Transferer] :
 ~ tries to move items from fromSlot to the bot at dir's toSlot, a max of maxCount items will be moved
 ~ returns the number of items moved
 
-movePlayerControl(dir):
+movePlayerControl(dir / id):
+~ if the input is a string, it is treated as a dir
+~ if it is a number, it is treated as an id
 ~ if the cell at dir is a bot, and CB has player control, then player control will be moved to the bot at dir
+~ if the id is a valid id (meaning there is a bot with said id), then player control changes to bot id
 ~ returns true if player control was moved
 
 isUnderPlayerControl:
