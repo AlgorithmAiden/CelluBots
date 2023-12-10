@@ -1,1 +1,0 @@
-Bot.giveItems('right', 0, 0)

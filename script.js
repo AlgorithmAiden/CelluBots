@@ -300,7 +300,6 @@ import Console from './utils/Console.js'
             scan.forEach(item => {
                 self.items.push({
                     text: item.name.split('.')[0],
-                    info: item.name,
                     func() { load(item) }
                 })
             })
@@ -597,7 +596,9 @@ import Console from './utils/Console.js'
             hauntedBotId,
             resources
         })
-        await createAndWriteFile(savesFolderHandle, `${Date.now()}.json`, saveValue)
+        const now = new Date(Date.now())
+        const nowText = `${(new Date().toString().match(/\(([A-Za-z\s].*)\)/)[1]).split(' ').map(value => value[0]).join('')}-${now.getFullYear()}-${now.getMonth()}-${now.getDay()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`
+        await createAndWriteFile(savesFolderHandle, `${nowText}.json`, saveValue)
     }
 
     async function load(handle) {
@@ -961,6 +962,7 @@ import Console from './utils/Console.js'
             bot = undefined
         }
     })()
+
 
     //renders the grid stuff
     function renderGrid() {
