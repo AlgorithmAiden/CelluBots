@@ -718,7 +718,7 @@ import Console from './utils/Console.js'
                 if (hasAction && botModes.includes(mode)) {
                     let cost = 0
                     bot.inventory.forEach(slot => {
-                        cost += slot.count
+                        cost += bot.inventory[slot].count
                     })
                     bot.energy -= cost
                     bot.mode = mode
@@ -735,7 +735,7 @@ import Console from './utils/Console.js'
                 const targetBotId = grid.get(targetCords.x, targetCords.y).botId
                 if (targetBotId == undefined) return false
                 let cost = 0
-                bots[targetBotId].inventory.forEach(slot => cost += slot.count)
+                bots[targetBotId].inventory.forEach(slot => cost += bots[targetBotId].inventory[slot].count)
                 bots[targetBotId].mode = mode
                 bots[targetBotId].energy -= cost
                 return true
