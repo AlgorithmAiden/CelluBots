@@ -69,8 +69,8 @@ const Bot = (() => {
         async giveEnergy(dir, maxEnergy) {
             return await runCommand(['give_energy', dir, maxEnergy])
         },
-        async craft(recipe, toSlot) {
-            return await runCommand(['craft', recipe, toSlot])
+        async craft(recipeName, toSlot) {
+            return await runCommand(['craft', recipeName, toSlot])
         }
     }
 })()
@@ -80,7 +80,7 @@ self.addEventListener('message', async (m) => {
     if (message.type == 'keyPass') {
         await new Promise(async (resolve, reject) => {
             try {
-                await (func = new Function(`
+                await (new Function(`
                     return (async () => {
                         ${BotCode};
                         ${message.code}

@@ -122,3 +122,7 @@ burnCoal(fromSlot, maxBurn = Infinity) * [Energizer] :
 giveEnergy(dir, maxEnergy) * [Energizer] :
 ~ gives up to maxEnergy to the bot at dir
 ~ returns the amount of energy given
+
+craft(recipeName, toSlot) * [Crafter] :
+~ tries to craft the recipe, putting the result in toSlot
+~ returns true if crafting succeeded

@@ -446,6 +446,7 @@ import recipes from './recipes.js'
             { text: 'Transfer Player Control', func() { Menu.open('quick_actions/transfer_player_control') } },
             { text: 'Burn Coal', func() { bots[hauntedBotId].programCode = `Bot.burnCoal('0')`; bots[hauntedBotId].programName = 'Burn Coal'; oneTick = true }, info: '*' },
             { text: 'Give Energy', func() { Menu.open('quick_actions/give_energy') }, info: '*' },
+            { text: 'Craft', func() { Menu.open('quick_actions/craft') }, info: '*' },
             { text: 'Reset Bot Program', func() { bots[hauntedBotId].programCode = ``; bots[hauntedBotId].programName = 'No Program' } },
             { text: 'Reset Bot Mem', func() { bots[hauntedBotId].mem = {} } },
         ]
@@ -474,10 +475,10 @@ import recipes from './recipes.js'
     Menu.setMenu('quick_actions/harvest', {
         title: 'Choose harvest direction',
         items: [
-            { text: 'Up', func() { bots[hauntedBotId].programCode = `Bot.harvest('up',0)`; bots[hauntedBotId].programName = 'Harvest Up'; oneTick = true } },
-            { text: 'Right', func() { bots[hauntedBotId].programCode = `Bot.harvest('right',0)`; bots[hauntedBotId].programName = 'Harvest Right'; oneTick = true } },
-            { text: 'Down', func() { bots[hauntedBotId].programCode = `Bot.harvest('down',0)`; bots[hauntedBotId].programName = 'Harvest Down'; oneTick = true } },
-            { text: 'Left', func() { bots[hauntedBotId].programCode = `Bot.harvest('left',0)`; bots[hauntedBotId].programName = 'Harvest Left'; oneTick = true } },
+            { text: 'Up', func() { bots[hauntedBotId].programCode = `for(let i = 0; i < 9; i++)Bot.harvest('up',i)`; bots[hauntedBotId].programName = 'Harvest Up'; oneTick = true } },
+            { text: 'Right', func() { bots[hauntedBotId].programCode = `for(let i = 0; i < 9; i++)Bot.harvest('right',i)`; bots[hauntedBotId].programName = 'Harvest Right'; oneTick = true } },
+            { text: 'Down', func() { bots[hauntedBotId].programCode = `for(let i = 0; i < 9; i++)Bot.harvest('down',i)`; bots[hauntedBotId].programName = 'Harvest Down'; oneTick = true } },
+            { text: 'Left', func() { bots[hauntedBotId].programCode = `for(let i = 0; i < 9; i++)Bot.harvest('left',i)`; bots[hauntedBotId].programName = 'Harvest Left'; oneTick = true } },
         ]
     })
     Menu.setMenu('quick_actions/take_items', {
@@ -614,6 +615,18 @@ import recipes from './recipes.js'
                 self.title = 'Auto Save Is Disabled'
             else
                 self.title = `Current Auto Save Interval is every ${self.autoSaveIntervalText}`
+        }
+    })
+    Menu.setMenu('quick_actions/craft', {
+        title: 'Choose recipe',
+        onCreate(self) {
+            self.items=[]
+            Object.keys(recipes).forEach((recipeName)=>{
+                self.items.push({
+                    text:recipeName,
+                    func() { bots[hauntedBotId].programCode = `Bot.craft('${recipeName}',0)`; bots[hauntedBotId].programName = `Craft ${recipeName}`; oneTick = true }
+                })
+            })
         }
     })
 
@@ -1032,7 +1045,40 @@ import recipes from './recipes.js'
                 bot.energy -= givenEnergy
                 bots[targetBotId].energy += givenEnergy
                 return givenEnergy
-            }
+            },
+            craft(recipeName, toSlot) {
+                if (!hasAction) return false
+                if (!bot.mode == 'Crafter') return false
+                const recipe = recipes[recipeName]
+                if (recipe == undefined) return false
+                let inventory = bot.inventory
+                let canCraft = true
+                recipe.forEach((item, index) => {
+                    if (item != 0) {
+                        if (!(inventory[index].type == item && 
+                            inventory[slot].count > 0))
+                            canCraft = false
+                    }
+                })
+                if (!canCraft) return false
+                if (
+                    (inventory[toSlot].count - recipe[toSlot] != 0 ? 1 : 0) != 0 &&
+                    !(inventory[toSlot].type == recipeName && (inventory[toSlot].count - recipe[toSlot] != 0 ? 1 : 0) < stackSize)
+                ) return false
+                recipe.forEach((item, index) => {
+                    if (item != 0) {
+                        bot[inventory][index].count--
+                        if (inventory[index].count == 0)
+                            bot[inventory][index].type = ''
+                    }
+                })
+                if (inventory[toSlot].type == recipeName)
+                    bot[inventory][toSlot].count++
+                else
+                    bot[inventory][toSlot] = { type: recipeName, count: 1 }
+                return true
+            },
+            // placeBot()
         }
 
         //handle all the messages
@@ -1179,13 +1225,13 @@ import recipes from './recipes.js'
     let lastTick = 0
     let lastAutoSave = Date.now()
     while (true) {
-        if (Date.now()-lastAutoSave>=autoSaveInterval&&autoSaveInterval!=0) {
-            Console.log({text:'Starting Autosave',color:'#0ff'})
+        if (Date.now() - lastAutoSave >= autoSaveInterval && autoSaveInterval != 0) {
+            Console.log({ text: 'Starting Autosave', color: '#0ff' })
             await save()
-            Console.log({text:'Autosave Complete',color:'#0ff'})
+            Console.log({ text: 'Autosave Complete', color: '#0ff' })
             lastAutoSave = Date.now()
         }
-        
+
         if (Menu.getStack().length == 0) {
             if (viewPort.freeCam) {
                 if (currentKeys.includes('w'))
