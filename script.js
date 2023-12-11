@@ -1,6 +1,7 @@
 import * as Colors from './utils/Colors.js'
 import * as Menu from './utils/Menu.js'
 import Console from './utils/Console.js'
+import recipes from './recipes.js'
     ;
 (async () => {
 
@@ -175,23 +176,35 @@ import Console from './utils/Console.js'
 
     //hold all the resource info
     let resources = {
-        copper: {
+        copper_ore: {
             color: '#ef7646',
             richness: 5_000,
             frequency: .2,
-            scale: 20
+            scale: 15
         },
-        iron: {
+        iron_ore: {
             color: '#aaaaff',
             richness: 5_000,
             frequency: .2,
-            scale: 20
+            scale: 15
         },
         coal: {
             color: '#000000',
             richness: 1_000,
             frequency: .25,
             scale: 30
+        },
+        lead_ore: {
+            color: '#7d3659',
+            richness: 5_000,
+            frequency: .15,
+            scale: 15
+        },
+        emerald: {
+            color: '#00ff00',
+            richness: 100,
+            frequency: .1,
+            scale: 5
         }
     }
 
@@ -220,6 +233,7 @@ import Console from './utils/Console.js'
     let autoTick = false
     let oneTick = false
     let minTickTime = 0
+    let autoSaveInterval = 0
 
     //to read / write, use grid.get / grid.set
     let grid = {
@@ -272,7 +286,7 @@ import Console from './utils/Console.js'
     let viewPort = {
         x: 0,
         y: 0,
-        scale: 10,
+        scale: 100,
         freeCam: false
     }
 
@@ -296,6 +310,7 @@ import Console from './utils/Console.js'
             { text: 'Create Save File', func: save, info: 'May reload the page' },
             { text: 'Load Save File', async func() { await Menu.open('load_save') } },
             { text: 'Change Minimum Tick Time', func() { Menu.open('min_tick_time') } },
+            { text: 'Change Auto Save Interval', func() { Menu.open('auto_save_interval') } },
             { text: 'Admin Commands', func() { Menu.open('admin') } },
         ],
         onCreate(self) {
@@ -580,6 +595,25 @@ import Console from './utils/Console.js'
                 self.title = `Current Minimum Tick Time is 1 Second Per Tick`
             else
                 self.title = `Current Minimum Tick Time is ${minTickTime / 1000} Seconds Per Tick`
+        }
+    })
+    Menu.setMenu('auto_save_interval', {
+        autoSaveIntervalText: '',
+        items: [
+            { text: 'No Auto Save', func(parentMenu) { autoSaveInterval = 0; parentMenu.autoSaveIntervalText = ''; parentMenu.onCreate(parentMenu) } },
+            { text: '5 Seconds', func(parentMenu) { autoSaveInterval = 5_000; parentMenu.autoSaveIntervalText = '5 Seconds'; parentMenu.onCreate(parentMenu) } },
+            { text: '30 Seconds', func(parentMenu) { autoSaveInterval = 30_000; parentMenu.autoSaveIntervalText = '30 Seconds'; parentMenu.onCreate(parentMenu) } },
+            { text: '1 Minute', func(parentMenu) { autoSaveInterval = 60_000; parentMenu.autoSaveIntervalText = '1 Minute'; parentMenu.onCreate(parentMenu) } },
+            { text: '5 Minutes', func(parentMenu) { autoSaveInterval = 300_000; parentMenu.autoSaveIntervalText = '5 Minutes'; parentMenu.onCreate(parentMenu) } },
+            { text: '15 Minutes', func(parentMenu) { autoSaveInterval = 900_000; parentMenu.autoSaveIntervalText = ''; parentMenu.onCreate(parentMenu) } },
+            { text: '30 Minutes', func(parentMenu) { autoSaveInterval = 1_800_000; parentMenu.autoSaveIntervalText = '30 Minutes'; parentMenu.onCreate(parentMenu) } },
+            { text: '1 hour', func(parentMenu) { autoSaveInterval = 3_600_000; parentMenu.autoSaveIntervalText = '1 hour'; parentMenu.onCreate(parentMenu) } },
+        ],
+        onCreate(self) {
+            if (autoSaveInterval == 0)
+                self.title = 'Auto Save Is Disabled'
+            else
+                self.title = `Current Auto Save Interval is every ${self.autoSaveIntervalText}`
         }
     })
 
@@ -1143,7 +1177,15 @@ import Console from './utils/Console.js'
 
     //the game loop
     let lastTick = 0
+    let lastAutoSave = Date.now()
     while (true) {
+        if (Date.now()-lastAutoSave>=autoSaveInterval&&autoSaveInterval!=0) {
+            Console.log({text:'Starting Autosave',color:'#0ff'})
+            await save()
+            Console.log({text:'Autosave Complete',color:'#0ff'})
+            lastAutoSave = Date.now()
+        }
+        
         if (Menu.getStack().length == 0) {
             if (viewPort.freeCam) {
                 if (currentKeys.includes('w'))
@@ -1198,39 +1240,7 @@ import Console from './utils/Console.js'
     ~ every bot has 9 inventory space
     ~ every bot will know its position in the grid / mode / id / inventory
     ~ every bot has its own memory accessible by other bots nearby / itself, but it can only hold Number / String / Boolean / Array / Object types (for communicating between bots)
-    
-    Bot Commands:
-    ~ * M moveBot(dir): tries to move the direction, returns true if the move worked
-    ~ moveItem(fromSlot, toSlot, count = stackSize): tries to move items from one slot to another, returns true if move worked
-    ~ readSlot(slot): returns the items (if any) in the slot
-    ~ look(dir): returns the cell next in the direction (resource, count, botId) (read only)
-    ~ readBot(dir): returns the bot info at dir (inventory, id, mode), returns false if there is no bot at dir
-    ~ * H harvest(dir, slot): harvests one item from the dir and puts it in slot (if there is space in slot), returns true if an item was harvested (will always return false if there is no resource to harvest)
-    ~ setSelfProgram(programName): sets its own program to programName, returns false if programName is invalid (current program will still finish)
-    ~ B setOtherProgram(programName, dir): sets the program of the bot at dir to programName, returns false if there is no bot or programName is invalid
-    ~ getMem(dir): returns the mem of the bot at dir, or false if there is no bot
-    ~ setMem(dir, mem): sets the mem of the bot at dir, returns true if there is a bot, otherwise false
-    ~ * T takeItem(dir, fromSlot, toSlot, count): takes items from the bot at dir to self, returns true on success
-    ~ * T giveItem(dir, fromSlot, toSlot, count): gives items from self to the bot at dir, returns true on success
-    ~ * C craft(recipeName, toSlot): crafts the recipe putting the results into toSlot, returns true if crafting succeeded
-    ~ * changeMode(mode): changes bot mode, returns false if the mode is invalid
-    ~ * B placeBot(dir, fromSlot): places a new bot at dir, taking from slot, returns true if bot placed
-    ~ * D destroyBlock(dir, toSlot): removes any resource at the dir and putting 1 resource in toSlot, if there is a bot it will be picked up and placed in toSlot, returns true on success
-    ~ * D destroyItem(slot): destroys all items in said slot
-    ~ transferPlayer(dir): transfers the player to the bot at dir, returns true on success
-    items with a * cost an actionPoint (there is one actionPoint per turn) (the action will be used if the function runs successfully)
-    items with a Mode can only be preformed by said mode
-    key: H: Harvester, M: Mobile, C: Crafter, B: Builder, D: Destroyer, T: Transferer
-    
-    Modes:
-    ~ Blank: does nothing
-    ~ Harvester: can harvest resources
-    ~ Mobile: can move
-    ~ Crafter: can craft
-    ~ Builder: can change other bots program + build bots
-    ~ Destroyer: can destroy resource nodes + pick up bots + destroy items
-    ~ Transferer: can transfer items from bot to bot
-    
+        
     Tech:
     ~ the tech has to be input by the player
     ~ tech unlocks things like new recipes, new minable resources, new botCommands (such as global mem, etc), new modes
@@ -1258,7 +1268,7 @@ import Console from './utils/Console.js'
         x: 0,
         y: 0,
         inventory: [
-            [5, 'copper_ore'],
+            [5, 'copper_ore_ore'],
             [0], (any slot with zero count is empty)
             [10, 'gear']
         ],
@@ -1278,7 +1288,6 @@ import Console from './utils/Console.js'
     ~ using a command line interface to make some actions easier
     
     Todo:
-    ~ add save / load
     ~ add tech
     ~ add crafting
     ~ make the game downloadable

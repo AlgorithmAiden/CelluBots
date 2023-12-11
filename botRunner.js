@@ -69,6 +69,9 @@ const Bot = (() => {
         async giveEnergy(dir, maxEnergy) {
             return await runCommand(['give_energy', dir, maxEnergy])
         },
+        async craft(recipe, toSlot) {
+            return await runCommand(['craft', recipe, toSlot])
+        }
     }
 })()
 `
