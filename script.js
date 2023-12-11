@@ -290,8 +290,14 @@ import recipes from './recipes.js'
         freeCam: false
     }
 
+    function runBotCode(code, name = 'Unknown') {
+        bots[hauntedBotId].programCode = code
+        bots[hauntedBotId].programName = name
+        oneTick = true
+    }
+
     //the color for empty spaces
-    const backgroundColor = '#333'
+    const backgroundColor = '#222'
 
     //setup the console
     Console.ctx = ctx
@@ -620,10 +626,10 @@ import recipes from './recipes.js'
     Menu.setMenu('quick_actions/craft', {
         title: 'Choose recipe',
         onCreate(self) {
-            self.items=[]
-            Object.keys(recipes).forEach((recipeName)=>{
+            self.items = []
+            Object.keys(recipes).forEach((recipeName) => {
                 self.items.push({
-                    text:recipeName,
+                    text: recipeName,
                     func() { bots[hauntedBotId].programCode = `Bot.craft('${recipeName}',0)`; bots[hauntedBotId].programName = `Craft ${recipeName}`; oneTick = true }
                 })
             })
@@ -1055,7 +1061,7 @@ import recipes from './recipes.js'
                 let canCraft = true
                 recipe.forEach((item, index) => {
                     if (item != 0) {
-                        if (!(inventory[index].type == item && 
+                        if (!(inventory[index].type == item &&
                             inventory[slot].count > 0))
                             canCraft = false
                     }
@@ -1213,18 +1219,60 @@ import recipes from './recipes.js'
         })
     }
 
-    //needed for hold effects
+    //listen for keys
     let currentKeys = []
     document.addEventListener('keyup', event => {
         while (currentKeys.includes(event.key))
             currentKeys.splice(currentKeys.indexOf(event.key), 1)
     })
     document.addEventListener('keydown', event => currentKeys.push(event.key))
+    document.addEventListener('keypress', (event) => {
+        if (clickShortcuts[event.key])
+            clickShortcuts(event.key)(event)
+    })
+
+
+    const holdShortcuts = {
+        e() {
+            viewPort.scale = Math.max(viewPort.scale * .99, -Infinity)
+        },
+        q() {
+            viewPort.scale *= 1.01
+        },
+        w() {
+            if (viewPort.freeCam)
+                viewPort.y -= viewPort.scale * .01
+            else if (bots[hauntedBotId].mode == 'Mobile')
+                runBotCode(`await Bot.moveSelf('up')`, 'Move Self Up')
+        },
+        d() {
+            if (viewPort.freeCam)
+                viewPort.x += viewPort.scale * .01
+            else if (bots[hauntedBotId].mode == 'Mobile')
+                runBotCode(`await Bot.moveSelf('right')`, 'Move Self Right')
+        },
+        s() {
+            if (viewPort.freeCam)
+                viewPort.y += viewPort.scale * .01
+            else if (bots[hauntedBotId].mode == 'Mobile')
+                runBotCode(`await Bot.moveSelf('down')`, 'Move Self Down')
+        },
+        a() {
+            if (viewPort.freeCam)
+                viewPort.x -= viewPort.scale * .01
+            else if (bots[hauntedBotId].mode == 'Mobile')
+                runBotCode(`await Bot.moveSelf('left')`, 'Move Self Left')
+        },
+        f() { viewPort.freeCam = !viewPort.freeCam }
+    }
+    const clickShortcuts = {
+
+    }
 
     //the game loop
     let lastTick = 0
     let lastAutoSave = Date.now()
-    while (true) {
+    async function tick() {
         if (Date.now() - lastAutoSave >= autoSaveInterval && autoSaveInterval != 0) {
             Console.log({ text: 'Starting Autosave', color: '#0ff' })
             await save()
@@ -1233,20 +1281,10 @@ import recipes from './recipes.js'
         }
 
         if (Menu.getStack().length == 0) {
-            if (viewPort.freeCam) {
-                if (currentKeys.includes('w'))
-                    viewPort.y -= viewPort.scale * .01
-                if (currentKeys.includes('d'))
-                    viewPort.x += viewPort.scale * .01
-                if (currentKeys.includes('s'))
-                    viewPort.y += viewPort.scale * .01
-                if (currentKeys.includes('a'))
-                    viewPort.x -= viewPort.scale * .01
-            }
-            if (currentKeys.includes('e'))
-                viewPort.scale = Math.max(viewPort.scale * .99, -Infinity)
-            if (currentKeys.includes('q'))
-                viewPort.scale *= 1.01
+            currentKeys.forEach(key => {
+                if (holdShortcuts[key])
+                    holdShortcuts[key]()
+            })
         }
 
         if ((autoTick || oneTick) && Date.now() - lastTick >= minTickTime) {
@@ -1265,8 +1303,9 @@ import recipes from './recipes.js'
         Menu.render()
         Console.render(canvas.height * .2, 20)
 
-        await new Promise(r => setTimeout(r, 0))
+        setTimeout(tick, 0)
     }
+    tick()
 
 
     /*
