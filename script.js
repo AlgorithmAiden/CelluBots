@@ -1227,14 +1227,14 @@ import recipes from './recipes.js'
     })
     document.addEventListener('keydown', event => currentKeys.push(event.key))
     document.addEventListener('keypress', (event) => {
-        if (clickShortcuts[event.key])
-            clickShortcuts(event.key)(event)
+        if (clickShortcuts[event.key] && Menu.getStack().length == 0)
+            clickShortcuts[event.key](event)
     })
 
 
     const holdShortcuts = {
         e() {
-            viewPort.scale = Math.max(viewPort.scale * .99, -Infinity)
+            viewPort.scale = Math.max(viewPort.scale * .99, .1)
         },
         q() {
             viewPort.scale *= 1.01
@@ -1242,35 +1242,55 @@ import recipes from './recipes.js'
         w() {
             if (viewPort.freeCam)
                 viewPort.y -= viewPort.scale * .01
-            else if (bots[hauntedBotId].mode == 'Mobile')
-                runBotCode(`await Bot.moveSelf('up')`, 'Move Self Up')
+            else if (Date.now() - lastTick >= minTickTime) {
+                if (bots[hauntedBotId].mode == 'Mobile')
+                    runBotCode(`await Bot.moveSelf('up')`, 'Move Self Up')
+                else if (bots[hauntedBotId].mode == 'Harvester')
+                    runBotCode(`for(let i=0;i<9;i++)await Bot.harvest('up',i)`)
+            }
         },
         d() {
             if (viewPort.freeCam)
                 viewPort.x += viewPort.scale * .01
-            else if (bots[hauntedBotId].mode == 'Mobile')
-                runBotCode(`await Bot.moveSelf('right')`, 'Move Self Right')
+            else if (Date.now() - lastTick >= minTickTime) {
+                if (bots[hauntedBotId].mode == 'Mobile')
+                    runBotCode(`await Bot.moveSelf('right')`, 'Move Self Right')
+                else if (bots[hauntedBotId].mode == 'Harvester')
+                    runBotCode(`for(let i=0;i<9;i++)await Bot.harvest('right',i)`)
+            }
         },
         s() {
             if (viewPort.freeCam)
                 viewPort.y += viewPort.scale * .01
-            else if (bots[hauntedBotId].mode == 'Mobile')
-                runBotCode(`await Bot.moveSelf('down')`, 'Move Self Down')
+            else if (Date.now() - lastTick >= minTickTime) {
+                if (bots[hauntedBotId].mode == 'Mobile')
+                    runBotCode(`await Bot.moveSelf('down')`, 'Move Self Down')
+                else if (bots[hauntedBotId].mode == 'Harvester')
+                    runBotCode(`for(let i=0;i<9;i++)await Bot.harvest('down',i)`)
+            }
         },
         a() {
             if (viewPort.freeCam)
                 viewPort.x -= viewPort.scale * .01
-            else if (bots[hauntedBotId].mode == 'Mobile')
-                runBotCode(`await Bot.moveSelf('left')`, 'Move Self Left')
+            else if (Date.now() - lastTick >= minTickTime) {
+                if (bots[hauntedBotId].mode == 'Mobile')
+                    runBotCode(`await Bot.moveSelf('left')`, 'Move Self Left')
+                else if (bots[hauntedBotId].mode == 'Harvester')
+                    runBotCode(`for(let i=0;i<9;i++)await Bot.harvest('left',i)`)
+            }
         },
-        f() { viewPort.freeCam = !viewPort.freeCam }
     }
     const clickShortcuts = {
+        f() { viewPort.freeCam = !viewPort.freeCam },
+        m() { Menu.open('quick_actions/set_self_mode') },
+        p() { Menu.open('set_self_program') },
+        i() { Menu.open('self_info') },
+        ' '() { autoTick = !autoTick },
 
     }
 
     //the game loop
-    let lastTick = 0
+    let lastTick = Date.now()
     let lastAutoSave = Date.now()
     async function tick() {
         if (Date.now() - lastAutoSave >= autoSaveInterval && autoSaveInterval != 0) {
@@ -1283,7 +1303,7 @@ import recipes from './recipes.js'
         if (Menu.getStack().length == 0) {
             currentKeys.forEach(key => {
                 if (holdShortcuts[key])
-                    holdShortcuts[key]()
+                    holdShortcuts[key](Date.now() - lastTick)
             })
         }
 
