@@ -232,7 +232,7 @@ import recipes from './recipes.js'
     //keep track of ticking
     let autoTick = false
     let oneTick = false
-    let minTickTime = 0
+    let minTickTime = 1
     let autoSaveInterval = 0
 
     //to read / write, use grid.get / grid.set
@@ -244,7 +244,7 @@ import recipes from './recipes.js'
                 const resource = resources[name]
                 const noise = perlinNoise(x / resource.scale, y / resource.scale, resource.seed)
                 const frequency = resource.frequency
-                if (noise < frequency && distance > 10) {
+                if (noise < frequency && distance > 5) {
                     const richness = Math.ceil((1 - noise / frequency) * resource.richness)
                     if ((!cell.resource) || ((!cell.resource) && cell.count < richness))
                         cell = { resource: name, count: richness }
@@ -1225,12 +1225,14 @@ import recipes from './recipes.js'
         while (currentKeys.includes(event.key))
             currentKeys.splice(currentKeys.indexOf(event.key), 1)
     })
-    document.addEventListener('keydown', event => currentKeys.push(event.key))
+    document.addEventListener('keydown', event => {
+        if (!currentKeys.includes(event.key))
+            currentKeys.push(event.key)
+    })
     document.addEventListener('keypress', (event) => {
         if (clickShortcuts[event.key] && Menu.getStack().length == 0)
             clickShortcuts[event.key](event)
     })
-
 
     const holdShortcuts = {
         e() {
@@ -1285,6 +1287,8 @@ import recipes from './recipes.js'
         m() { Menu.open('quick_actions/set_self_mode') },
         p() { Menu.open('set_self_program') },
         i() { Menu.open('self_info') },
+        t() { Menu.open('min_tick_time') },
+        b() { if (bots[hauntedBotId].mode == 'Energizer') runBotCode('for (let i=0;i<9;i++)await Bot.burnCoal(i)') },
         ' '() { autoTick = !autoTick },
 
     }
@@ -1326,8 +1330,6 @@ import recipes from './recipes.js'
         setTimeout(tick, 0)
     }
     tick()
-
-
     /*
     
     Cell Structure:

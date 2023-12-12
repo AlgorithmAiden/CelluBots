@@ -117,17 +117,17 @@ export default {
         0
     ],
     "bot_heart": [
+        0,
         "solder",
-        "circuit",
-        "copper_wire",
+        0,
 
         "circuit",
-        "iron",
+        "iron_plate",
         "circuit",
 
+        0,
         "copper_wire",
-        "circuit",
-        "solder"
+        0
     ],
     "bot": [
         "iron_plate",
