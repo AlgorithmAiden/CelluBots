@@ -4,19 +4,14 @@
 <head>
     <title>CelluBots</title>
     <style>
+        html,
         body {
             margin: 0;
             padding: 0;
             height: 100%;
             width: 100%;
             overflow: hidden;
-        }
-
-        html,
-        body {
-            margin: 0;
-            height: 100%;
-            overflow: hidden;
+            display: flex;
         }
 
         button {
@@ -28,12 +23,8 @@
             font-size: 5vw;
             cursor: pointer;
             font-family: 'Silkscreen';
-        }
-
-        button {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 100%;
+            height: 100%;
         }
     </style>
     <meta charset="UTF-8">
@@ -43,24 +34,11 @@
 
 <body>
     <canvas id="canvas" width="0" height="0"></canvas>
-    <button id="getFolderButton">CelluBots requires a local folder to use, it is recommended you create a new folder for the game for safety, cLick anywhere to select folder</button>
+    <button id="getFolderButton">CelluBots requires a local folder to use, it is recommended you create a new folder for
+        the game for safety, cLick anywhere to select folder</button>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs/dist/peer.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=swap" rel="stylesheet">
     <script type="module" src="script.js"></script>
 </body>
 
 </html>
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-    <button id="fullscreen-button">Click Me</button>
-</body>
-
-</html> -->

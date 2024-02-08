@@ -2,7 +2,8 @@ import * as Colors from './utils/Colors.js'
 import * as Menu from './utils/Menu.js'
 import Console from './utils/Console.js'
 import recipes from './recipes.js'
-    ;
+import SPTP from './utils/SimplePTPComs.js';
+;
 (async () => {
 
     //the handle used for all file system interactions
@@ -90,9 +91,10 @@ import recipes from './recipes.js'
         if (!saves)
             savesFolderHandle = await createDirectory(folderHandle, 'saves')
 
-        //remove the button
-        document.getElementById('getFolderButton').remove()
     })()
+
+    //remove the button
+    document.getElementById('getFolderButton').remove()
 
     //this is the seed controlling all world generation
     const firstSeed = Math.random() * 100
@@ -286,15 +288,36 @@ import recipes from './recipes.js'
     let viewPort = {
         x: 0,
         y: 0,
-        scale: 100,
+        scale: 10,
         freeCam: false
     }
 
+    //sets the current bots code, and runs it (ticks once)
     function runBotCode(code, name = 'Unknown') {
         bots[hauntedBotId].programCode = code
         bots[hauntedBotId].programName = name
         oneTick = true
     }
+
+    function setUpHost() {
+        SPTP.host.setOnMessage((from, message) => {
+            console.log(from, message)
+            SPTP.host.sendMessage(from, from)
+        })
+        document.addEventListener('keypress', event => SPTP.remote.sendMessage(event.key))
+    }
+    function setUpRemote() {
+        SPTP.remote.setOnMessage((from, message) => {
+            console.log(from, message)
+            SPTP.host.sendMessage(from, from)
+        })
+    }
+
+    //stuff for multiplayer
+    let multiplayerMode = false
+
+    //used for some edge cases with needing new html
+    let fullPause = false
 
     //the color for empty spaces
     const backgroundColor = '#222'
@@ -317,6 +340,7 @@ import recipes from './recipes.js'
             { text: 'Load Save File', async func() { await Menu.open('load_save') } },
             { text: 'Change Minimum Tick Time', func() { Menu.open('min_tick_time') } },
             { text: 'Change Auto Save Interval', func() { Menu.open('auto_save_interval') } },
+            { text: 'Multiplayer Actions', func() { Menu.open('multiplayer_connections') } },
             { text: 'Admin Commands', func() { Menu.open('admin') } },
         ],
         onCreate(self) {
@@ -566,12 +590,13 @@ import recipes from './recipes.js'
             {
                 text: 'Delete Cell Above', func() {
                     const CB = bots[hauntedBotId]
-                    if (grid.get(CB.x, CB.y - 1).botId != undefined)
-                        delete bots[grid.get(CB.x, CB.y - 1)]
+                    if (grid.get(CB.x, CB.y - 1).botId != undefined) {
+                        delete bots[grid.get(CB.x, CB.y - 1).botId]
+                    }
                     grid.set(CB.x, CB.y - 1, {})
                 }
             },
-            { text: 'Clear Inventory', func() { bots[hauntedBotId].inventory = new Array(9).fill(0).map(item => ({ count: 0, type: 'empty' })) } },
+            { text: 'Clear Inventory', func() { bots[hauntedBotId].inventory = new Array(9).fill(0).map(() => ({ count: 0, type: 'empty' })) } },
         ],
     })
     Menu.setMenu('min_tick_time', {
@@ -633,6 +658,65 @@ import recipes from './recipes.js'
                     func() { bots[hauntedBotId].programCode = `Bot.craft('${recipeName}',0)`; bots[hauntedBotId].programName = `Craft ${recipeName}`; oneTick = true }
                 })
             })
+        }
+    })
+    Menu.setMenu('multiplayer_connections', {
+        onCreate(self) {
+            if (multiplayerMode === false) {
+                self.title = 'Choose Self Mode'
+                self.items = [
+                    { text: 'Host', func() { multiplayerMode = 'host'; Menu.back(); Menu.open('multiplayer_connections') } },
+                    { text: 'Remote', func() { multiplayerMode = 'remote'; Menu.back(); Menu.open('multiplayer_connections') } }
+                ]
+            } else if (multiplayerMode == 'host') {
+                self.title = 'You Are In Host Mode'
+                self.items = [
+                    {
+                        text: 'Get Self Id', func() {
+                            if (!fullPause) {
+                                fullPause = true
+                                let hostId = document.createElement("pre")
+                                hostId.innerText = "test id"//SPTP.host.getSelfId()
+                                hostId.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; color: green; overflow: auto; margin: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; font-family: 'Silkscreen'; white-space: pre-wrap; text-align: center; font-size: 5vw;";
+                                hostId.id = 'hostId'
+                                document.body.appendChild(hostId)
+                                document.addEventListener('keyup', event => {
+                                    if (event.key == 'Enter') {
+                                        document.getElementById('hostId').remove()
+                                        fullPause = false
+                                        setUpHost()
+                                    }
+                                })
+                            }
+                        },
+                        info: 'press ENTER to exit'
+                    },
+                ]
+            } else {
+                self.title = 'You Are In Remote Mode'
+                self.items = [
+                    {
+                        text: 'Connect to Host', func() {
+                            if (!fullPause) {
+                                fullPause = true
+                                let idInput = document.createElement("textarea")
+                                idInput.style.cssText = "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; color: green; border: none; padding: 10px; box-sizing: border-box; z-index: 1000; font-family: 'Silkscreen', sans-serif; text-align: center; font-size: 5vw;";
+                                idInput.id = 'idInput'
+                                document.body.appendChild(idInput)
+                                document.addEventListener('keyup', event => {
+                                    if (event.key == 'Enter') {
+                                        SPTP.remote.connect(document.getElementById('idInput').value.split('\n')[0])
+                                        document.getElementById('idInput').remove()
+                                        fullPause = false
+                                        setUpRemote()
+                                    }
+                                })
+                            }
+                        },
+                        info: 'press ENTER to exit'
+                    },
+                ]
+            }
         }
     })
 
@@ -1107,6 +1191,7 @@ import recipes from './recipes.js'
             }
         }
 
+        //hold this to speed stuff up
         const bigTen = Math.pow(10, 10)
         return async () => {
             const botIds = Object.keys(bots)
@@ -1114,11 +1199,11 @@ import recipes from './recipes.js'
                 const botId = botIds[index]
                 bot = bots[botId]
                 if (bot.energy > 0) {
-                    bot.energy--
                     hasAction = true
                     doneCode = Math.floor(Math.random() * bigTen)
                     worker.postMessage({ key: doneCode, code: bot.programCode, type: 'keyPass' })
                     await new Promise(async (resolve) => resolvePromise = resolve)
+                    if (!hasAction) bot.energy--
                 } else
                     bot.mode = 'Blank'
             }
@@ -1288,6 +1373,7 @@ import recipes from './recipes.js'
         p() { Menu.open('set_self_program') },
         i() { Menu.open('self_info') },
         t() { Menu.open('min_tick_time') },
+        c() { Menu.open('multiplayer_connections') },
         b() { if (bots[hauntedBotId].mode == 'Energizer') runBotCode('for (let i=0;i<9;i++)await Bot.burnCoal(i)') },
         ' '() { autoTick = !autoTick },
 
@@ -1297,36 +1383,37 @@ import recipes from './recipes.js'
     let lastTick = Date.now()
     let lastAutoSave = Date.now()
     async function tick() {
-        if (Date.now() - lastAutoSave >= autoSaveInterval && autoSaveInterval != 0) {
-            Console.log({ text: 'Starting Autosave', color: '#0ff' })
-            await save()
-            Console.log({ text: 'Autosave Complete', color: '#0ff' })
-            lastAutoSave = Date.now()
+        if (!fullPause) {
+            if (Date.now() - lastAutoSave >= autoSaveInterval && autoSaveInterval != 0) {
+                Console.log({ text: 'Starting Autosave', color: '#0ff' })
+                await save()
+                Console.log({ text: 'Autosave Complete', color: '#0ff' })
+                lastAutoSave = Date.now()
+            }
+
+            if (Menu.getStack().length == 0) {
+                currentKeys.forEach(key => {
+                    if (holdShortcuts[key])
+                        holdShortcuts[key](Date.now() - lastTick)
+                })
+            }
+
+            if ((autoTick || oneTick) && Date.now() - lastTick >= minTickTime) {
+                console.log('tick')
+                oneTick = false
+                await runBots()
+                lastTick = Date.now()
+            }
+
+            if (!viewPort.freeCam) {
+                viewPort.x = bots[hauntedBotId].x
+                viewPort.y = bots[hauntedBotId].y
+            }
+
+            renderGrid()
+            Menu.render()
+            Console.render(canvas.height * .2, 20)
         }
-
-        if (Menu.getStack().length == 0) {
-            currentKeys.forEach(key => {
-                if (holdShortcuts[key])
-                    holdShortcuts[key](Date.now() - lastTick)
-            })
-        }
-
-        if ((autoTick || oneTick) && Date.now() - lastTick >= minTickTime) {
-            console.log('tick')
-            oneTick = false
-            await runBots()
-            lastTick = Date.now()
-        }
-
-        if (!viewPort.freeCam) {
-            viewPort.x = bots[hauntedBotId].x
-            viewPort.y = bots[hauntedBotId].y
-        }
-
-        renderGrid()
-        Menu.render()
-        Console.render(canvas.height * .2, 20)
-
         setTimeout(tick, 0)
     }
     tick()
@@ -1400,6 +1487,6 @@ import recipes from './recipes.js'
     ~ make the game downloadable
     ~ add settings
     ~ make the browser remember file permissions
- 
+    ~ make the host id copy to the clipboard
      */
 })()

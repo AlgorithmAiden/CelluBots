@@ -210,7 +210,6 @@ function multiLerp(colors, amount) {
 }
 
 export {
-// // module.exports = {
     changeDefaultColor,
     createColor,
     lerp,

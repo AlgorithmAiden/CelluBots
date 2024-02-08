@@ -1,8 +1,8 @@
 # CelluBots
-To interact with the game from the code, use 'Bot.' syntax (it will be given to your program on run)
+To interact with the game from the code, use 'Bot.' syntax
 
 Each tick each bot will be given one 'Action Point'
-These points do not save, each bot has a max of 1 at any point 
+These points do not save, each bot has a max of 1 at any point in time
 
 There are several bot 'modes', each mode has unique functions only it can do, and a bots color is equivalent to its mode
 
@@ -22,7 +22,7 @@ Each bot has several values, below is an example bot:
     x: 3,
     y: 2,
     mem: {},
-    botId: 12, //every bot has its own id
+    botId: 12, //every bot has a unique id
     mode: 'Mobile',
     programName: 'Hello.js',
     programCode: `console.log('Hello World!')`,
